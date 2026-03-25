@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Football Tycoon: 4-Way Evolution</title>
+    <style>
+        body { 
+            background: #0d1f0d; color: white; 
+            font-family: 'Segoe UI', sans-serif; display: flex; 
+            align-items: center; justify-content: center; 
+            height: 100vh; margin: 0; overflow: hidden; user-select: none;
+        }
+        .container { text-align: center; width: 1000px; }
+        .screen { display: none; }
+        .active { display: block; }
+        
+        .currency-bar { display: flex; justify-content: center; gap: 30px; margin-bottom: 10px; padding: 10px; background: rgba(0,0,0,0.6); border-radius: 30px; border: 1px solid #2ecc71; }
+        .xp-val { color: #3498db; font-weight: bold; font-size: 1.3rem; }
+        .coin-val { color: #f1c40f; font-weight: bold; font-size: 1.3rem; }
+
+        .tree-viewport {
+            position: relative; height: 600px; width: 950px; margin: 10px auto;
+            background: rgba(0,0,0,0.3); border-radius: 20px; border: 2px solid #2ecc71;
+            box-shadow: inset 0 0 50px rgba(46, 204, 113, 0.1);
+        }
+
+        .skill-node {
+            position: absolute; width: 90px; height: 90px;
+            background: #27ae60; border: 2px solid #0d1f0d; border-radius: 14px;
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+            cursor: pointer; transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+            z-index: 5; line-height: 1.1;
+        }
+        .skill-node.visible { display: flex; animation: nodeAppear 0.5s ease; }
+        @keyframes nodeAppear { from { opacity: 0; transform: scale(0.5); } to { opacity: 1; transform: scale(1); } }
+
+        .skill-node.disabled { background: #333 !important; opacity: 0.5; cursor: not-allowed; }
+        .skill-node.maxed { background: #f1c40f !important; color: #000; border-color: #fff; box-shadow: 0 0 15px #f1c40f; }
+        
+        .skill-node small { font-size: 0.55rem; text-transform: uppercase; margin-bottom: 4px; font-weight: bold; }
+        .skill-node span { font-size: 0.85rem; }
+        .price-xp { color: #3498db; font-size: 0.75rem; font-weight: bold; margin-top: 4px; }
+        .price-coin { color: #f1c40f; font-size: 0.75rem; font-weight: bold; margin-top: 4px; }
+
+        /* ЦЕНТРАЛЬНАЯ СЕТКА */
+        #node-click   { left: 430px; top: 255px; z-index: 10; border: 3px solid #fff; } 
+        
+        /* ВЛЕВО: КОМАНДА */
+        #node-auto    { left: 310px; top: 255px; }
+        #node-pro     { left: 190px; top: 255px; }
+        
+        /* ВПРАВО: ВРЕМЯ */
+        #node-delay   { left: 550px; top: 255px; } 
+        #node-time    { left: 670px; top: 255px; } 
+
+        /* ВНИЗ: ТЕХНИКА */
+        #node-crit    { left: 430px; top: 375px; }
+        #node-midas   { left: 430px; top: 495px; }
+
+        /* ВВЕРХ: БИЗНЕС */
+        #node-viewer  { left: 430px; top: 135px; }
+        #node-v-stand { left: 310px; top: 135px; }
+        #node-v-luck  { left: 550px; top: 135px; }
+        
+        #node-fan     { left: 430px; top: 15px; }
+        #node-attr    { left: 310px; top: 15px; }
+        #node-drink   { left: 550px; top: 15px; }
+        #node-f-stand { left: 430px; top: -100px; } /* Нужен скролл или расширение, если добавим еще выше */
+
+        /* ИГРА */
+        #game-screen { background: #1a4a1a; border-radius: 20px; padding: 20px; border: 4px solid #2ecc71; position: relative; }
+        .stats-panel { position: absolute; top: 20px; right: 20px; text-align: left; background: rgba(0,0,0,0.7); padding: 12px; border-radius: 10px; font-size: 0.8rem; border: 1px solid #2ecc71; width: 150px; }
+        
+        #kick-me { width: 120px; height: 120px; border-radius: 50%; background: white; font-size: 3.5rem; border: none; cursor: pointer; box-shadow: 0 8px 0 #ccc; margin: 15px 0; }
+        #kick-me:active { transform: translateY(4px); box-shadow: 0 4px 0 #ccc; }
+        #progress { height: 12px; background: #e74c3c; width: 100%; border-radius: 6px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="menu-screen" class="screen active">
+        <h2 style="margin:5px; color: #2ecc71; letter-spacing: 2px;">FOOTBALL CROSSROADS</h2>
+        <div class="currency-bar">
+            <div class="xp-val">🔹 <span id="total-xp">0</span></div>
+            <div class="coin-val">🟡 <span id="total-coins">0</span></div>
+        </div>
+        
+        <div class="tree-viewport">
+            <div id="node-click" class="skill-node visible" onclick="buy('click', 'xp')"><small>УДАР</small><span id="lvl-click">1/10</span><b class="price-xp" id="c-click">10</b></div>
+            
+            <div id="node-auto" class="skill-node" onclick="buy('auto', 'xp')"><small>ДРУГ</small><span id="lvl-auto">0/5</span><b class="price-xp" id="c-auto">100</b></div>
+            <div id="node-pro" class="skill-node" onclick="buy('pro', 'coin')"><small>ПРОФИ</small><span id="lvl-pro">0/5</span><b class="price-coin" id="c-pro">50</b></div>
+
+            <div id="node-delay" class="skill-node" onclick="buy('delay', 'coin')"><small>ЗАДЕРЖКА</small><span id="lvl-delay">0/3</span><b class="price-coin" id="c-delay">50</b></div>
+            <div id="node-time" class="skill-node" onclick="buy('time', 'coin')"><small>ВРЕМЯ</small><span id="lvl-time">0/5</span><b class="price-coin" id="c-time">100</b></div>
+
+            <div id="node-crit" class="skill-node" onclick="buy('crit', 'xp')"><small>КРИТ</small><span id="lvl-crit">0/3</span><b class="price-xp" id="c-crit">300</b></div>
+            <div id="node-midas" class="skill-node" onclick="buy('midas', 'coin')"><small>МИДАС</small><span id="lvl-midas">0/5</span><b class="price-coin" id="c-midas">200</b></div>
+
+            <div id="node-viewer" class="skill-node" onclick="buy('viewer', 'xp')"><small>ЗРИТЕЛЬ</small><span id="lvl-viewer">0/5</span><b class="price-xp" id="c-viewer">150</b></div>
+            <div id="node-v-stand" class="skill-node" onclick="buy('vStand', 'coin')"><small>ТРИБУНА</small><span id="lvl-vStand">0/5</span><b class="price-coin" id="c-vStand">100</b></div>
+            <div id="node-v-luck" class="skill-node" onclick="buy('vLuck', 'coin')"><small>ЩЕДРОСТЬ</small><span id="lvl-vLuck">0/3</span><b class="price-coin" id="c-vLuck">25</b></div>
+            <div id="node-fan" class="skill-node" onclick="buy('fan', 'coin')"><small>ФАНАТ</small><span id="lvl-fan">0/5</span><b class="price-coin" id="c-fan">250</b></div>
+            <div id="node-attr" class="skill-node" onclick="buy('attr', 'coin')"><small>АТРИБУТ.</small><span id="lvl-attr">0/5</span><b class="price-coin" id="c-attr">150</b></div>
+            <div id="node-drink" class="skill-node" onclick="buy('drink', 'coin')"><small>НАПИТКИ</small><span id="lvl-drink">0/5</span><b class="price-coin" id="c-drink">150</b></div>
+        </div>
+        <button id="start-btn" style="background:#2ecc71; color:white; border:none; padding:15px 60px; font-weight:bold; border-radius:50px; cursor:pointer; margin-top:10px;" onclick="startGame()">ИГРАТЬ</button>
+    </div>
+
+    <div id="game-screen" class="screen">
+        <div class="stats-panel" id="live-stats"></div>
+        <div style="background:#222; border-radius:6px; width:50%; margin:auto;"><div id="progress"></div></div>
+        <div id="timer-text" style="margin:10px; font-family: monospace;">15.0s</div>
+        <div style="font-size: 3rem;">⚽ <span id="current-score">0</span></div>
+        <button id="kick-me" onclick="handleKick()">⚽</button>
+        <div id="game-coins" style="color:#f1c40f; font-weight:bold; font-size:1.2rem;">🟡 0</div>
+    </div>
+</div>
+
+<script>
+    let data = {
+        xp: 0, coins: 0,
+        lvls: { click: 1, auto: 0, pro: 0, crit: 0, delay: 0, time: 0, viewer: 0, vLuck: 0, vStand: 0, fan: 0, attr: 0, drink: 0, midas: 0 },
+        max:  { click: 10, auto: 5, pro: 5, crit: 3, delay: 3, time: 5, viewer: 5, vLuck: 3, vStand: 5, fan: 5, attr: 5, drink: 5, midas: 5 },
+        costs: { click: 10, auto: 100, pro: 50, crit: 300, delay: 50, time: 100, viewer: 150, vLuck: 25, vStand: 100, fan: 250, attr: 150, drink: 150, midas: 200 }
+    };
+
+    let gameInterval, autoInterval, midasInterval, currentMs, maxMs, sessionCoins;
+
+    function updateUI() {
+        document.getElementById('total-xp').innerText = Math.floor(data.xp);
+        document.getElementById('total-coins').innerText = Math.floor(data.coins);
+        
+        const rules = [
+            { id: 'node-click', k: 'click', cur: 'xp', can: true },
+            { id: 'node-auto', k: 'auto', cur: 'xp', can: data.lvls.click >= 2 },
+            { id: 'node-pro', k: 'pro', cur: 'coin', can: data.lvls.auto >= 1 },
+            { id: 'node-crit', k: 'crit', cur: 'xp', can: data.lvls.click >= 2 },
+            { id: 'node-midas', k: 'midas', cur: 'coin', can: data.lvls.crit >= 1 },
+            { id: 'node-delay', k: 'delay', cur: 'coin', can: data.lvls.click >= 2 }, // Задержка вправо от Удара
+            { id: 'node-time', k: 'time', cur: 'coin', can: data.lvls.delay >= 1 },
+            { id: 'node-viewer', k: 'viewer', cur: 'xp', can: data.lvls.click >= 2 },
+            { id: 'node-v-stand', k: 'vStand', cur: 'coin', can: data.lvls.viewer >= 1 }, 
+            { id: 'node-v-luck', k: 'vLuck', cur: 'coin', can: data.lvls.viewer >= 1 },
+            { id: 'node-fan', k: 'fan', cur: 'coin', can: data.lvls.viewer >= 1 },
+            { id: 'node-attr', k: 'attr', cur: 'coin', can: data.lvls.fan >= 1 },
+            { id: 'node-drink', k: 'drink', cur: 'coin', can: data.lvls.fan >= 1 }
+        ];
+
+        rules.forEach(n => {
+            const el = document.getElementById(n.id);
+            if(n.can) el.classList.add('visible');
+            const isMax = data.lvls[n.k] >= data.max[n.k];
+            el.classList.toggle('maxed', isMax);
+            document.getElementById('lvl-'+n.k).innerText = isMax ? "MAX" : `${data.lvls[n.k]}/${data.max[n.k]}`;
+            document.getElementById('c-'+n.k).innerText = isMax ? "✓" : data.costs[n.k];
+            if(!isMax) {
+                let afford = (n.cur === 'xp') ? (data.xp >= data.costs[n.k]) : (data.coins >= data.costs[n.k]);
+                el.classList.toggle('disabled', !afford);
+            }
+        });
+    }
+
+    function buy(type, cur) {
+        if(data.lvls[type] >= data.max[type]) return;
+        let cost = data.costs[type];
+        if((cur === 'xp' && data.xp >= cost) || (cur === 'coin' && data.coins >= cost)) {
+            if(cur === 'xp') data.xp -= cost; else data.coins -= cost;
+            data.lvls[type]++;
+            data.costs[type] = Math.ceil(data.costs[type] * 2.2);
+            updateUI();
+        }
+    }
+
+    function startGame() {
+        data.score = 0; sessionCoins = 0;
+        maxMs = (15 + data.lvls.time) * 1000;
+        currentMs = maxMs;
+        document.getElementById('menu-screen').classList.remove('active');
+        document.getElementById('game-screen').classList.add('active');
+        
+        const vC = data.lvls.viewer + (data.lvls.vStand * 10);
+        const fC = data.lvls.fan + (data.lvls.fan * 10); // Упрощенный расчет для игры
+        
+        document.getElementById('live-stats').innerHTML = `
+            Удар: <b>${data.lvls.click}</b><br>
+            Крит: <b>${data.lvls.crit * 10}%</b><br>
+            Мидас: <b>${data.lvls.midas}%</b><br>
+            Доход: <b>${(vC*1)+(fC*5)}🟡</b>
+        `;
+
+        gameInterval = setInterval(() => {
+            currentMs -= 100;
+            document.getElementById('timer-text').innerText = (currentMs/1000).toFixed(1) + 's';
+            document.getElementById('progress').style.width = (currentMs/maxMs)*100 + '%';
+            if(currentMs <= 0) stopGame();
+        }, 100);
+
+        autoInterval = setInterval(() => {
+            data.score += (data.lvls.auto * 2 + data.lvls.pro * 10) / 10;
+            document.getElementById('current-score').innerText = Math.floor(data.score);
+        }, 100);
+
+        midasInterval = setInterval(() => {
+            if(data.lvls.midas > 0 && Math.random() * 100 < data.lvls.midas) {
+                sessionCoins++;
+                document.getElementById('game-coins').innerText = `🟡 ${sessionCoins}`;
+            }
+        }, 5000);
+    }
+
+    function stopGame() {
+        clearInterval(gameInterval); clearInterval(autoInterval); clearInterval(midasInterval);
+        let vCount = data.lvls.viewer + (data.lvls.vStand * 10);
+        let fCount = data.lvls.fan + (data.lvls.fan * 10);
+        let finalCoins = sessionCoins + (vCount * 1) + (fCount * 5);
+        finalCoins += (data.lvls.attr * fCount * 3); 
+        finalCoins += (data.lvls.drink * (vCount + fCount));
+        
+        data.xp += Math.floor(data.score);
+        data.coins += finalCoins;
+        
+        alert(`Матч окончен!\nXP: +${Math.floor(data.score)}\nМонеты: +${finalCoins}`);
+        document.getElementById('game-screen').classList.remove('active');
+        document.getElementById('menu-screen').classList.add('active');
+        updateUI();
+    }
+
+    function handleKick() {
+        let p = data.lvls.click;
+        if(Math.random()*100 < data.lvls.crit * 10) p *= 3;
+        if(Math.random()*100 < data.lvls.delay * 10) currentMs += 1000;
+        data.score += p;
+        document.getElementById('current-score').innerText = Math.floor(data.score);
+    }
+
+    updateUI();
+</script>
+</body>
+</html>

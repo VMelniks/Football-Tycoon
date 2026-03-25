@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Football Juggler Pro - Time Master</title>
+    <style>
+        body { 
+            background: #133313; color: white; 
+            font-family: sans-serif; display: flex; 
+            align-items: center; justify-content: center; 
+            height: 100vh; margin: 0; overflow: hidden;
+            user-select: none;
+        }
+        .container { 
+            text-align: center; background: rgba(0,0,0,0.8); 
+            padding: 30px; border-radius: 20px; 
+            border: 2px solid #2ecc71; width: 340px;
+        }
+        .screen { display: none; }
+        .active { display: block; }
+        
+        #kick-me { 
+            width: 150px; height: 150px; border-radius: 50%;
+            background: white; font-size: 3rem; border: 5px solid #333;
+            cursor: pointer; transition: transform 0.1s; margin: 20px 0;
+            display: inline-flex; align-items: center; justify-content: center;
+        }
+        #kick-me:active { transform: scale(0.9); }
+
+        .upgrade { 
+            background: #27ae60; color: white; border: none;
+            padding: 10px; margin: 5px 0; width: 100%;
+            border-radius: 8px; cursor: pointer;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .upgrade:disabled { background: #555; cursor: not-allowed; }
+        .upgrade span { text-align: left; font-size: 0.85rem; line-height: 1.1; }
+        
+        /* Скрытые контейнеры */
+        #upg-time-container, #upg-delay-container { display: none; } 
+
+        .timer-bar { height: 10px; background: #555; width: 100%; border-radius: 5px; margin: 10px 0; }
+        #progress { height: 100%; background: #e74c3c; width: 100%; border-radius: 5px; transition: width 0.2s linear; }
+        
+        .xp-val { font-size: 1.5rem; color: #f1c40f; }
+        #start-btn { 
+            background: #f1c40f; border: none; padding: 15px; 
+            width: 100%; font-weight: bold; font-size: 1.1rem; 
+            border-radius: 8px; cursor: pointer; margin-top: 15px;
+        }
+        
+        /* Эффекты */
+        .crit-flash { color: #f1c40f !important; text-shadow: 0 0 10px #f1c40f; transform: scale(1.2); }
+        .time-bonus { color: #2ecc71 !important; transform: scale(1.3); transition: 0.1s; }
+        .reset-btn { margin-top: 15px; background: none; border: none; color: #555; cursor: pointer; font-size: 0.7rem; text-decoration: underline; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="menu-screen" class="screen active">
+        <h2 style="color: #2ecc71; margin: 0;">JUGGLER PRO</h2>
+        <div>Ваш Опыт: <div class="xp-val"><span id="total-xp">0</span> XP</div></div>
+        
+        <div style="margin-top: 15px;">
+            <button class="upgrade" onclick="buyUpgrade('click')">
+                <span>Сила удара (+1)</span>
+                <b id="cost-click">10</b>
+            </button>
+            <button class="upgrade" onclick="buyUpgrade('auto')">
+                <span>Позвать друга (+2/сек)</span>
+                <b id="cost-auto">50</b>
+            </button>
+            <button class="upgrade" onclick="buyUpgrade('crit')">
+                <span>Крит. удар (<span id="crit-chance-ui">0</span>%)</span>
+                <b id="cost-crit">100</b>
+            </button>
+            
+            <div id="upg-time-container">
+                <button class="upgrade" onclick="buyUpgrade('time')">
+                    <span>Доп. время (+1с к базе)</span>
+                    <b id="cost-time">1000</b>
+                </button>
+            </div>
+            
+            <div id="upg-delay-container">
+                <button class="upgrade" onclick="buyUpgrade('delay')">
+                    <span>Затяжка времени (<span id="delay-ui">0</span>%)</span>
+                    <b id="cost-delay">500</b>
+                </button>
+            </div>
+        </div>
+        
+        <button id="start-btn" onclick="startGame()">НАЧАТЬ (15с + <span id="bonus-time-ui">0</span>)</button>
+        <button class="reset-btn" onclick="resetGame()">Сбросить всё</button>
+    </div>
+
+    <div id="game-screen" class="screen">
+        <div class="timer-bar"><div id="progress"></div></div>
+        <div id="timer-text" style="font-weight: bold; font-size: 1.2rem;">15с</div>
+        <div style="font-size: 1.2rem; margin: 10px 0;">Набито: <b id="current-score">0</b></div>
+        <button id="kick-me" onclick="handleKick()">⚽</button>
+        <div style="font-size: 0.8rem; opacity: 0.7;">Друг: <span id="auto-val">0</span>/сек | Крит: <span id="crit-ui-game">0</span>%</div>
+    </div>
+</div>
+
+<script>
+    const initialData = {
+        xp: 0,
+        clickPower: 1,
+        autoPower: 0,
+        critChance: 0,
+        extraTime: 0,
+        timeDelayChance: 0, // Шанс получить +1с при клике
+        costs: { click: 10, auto: 50, crit: 100, time: 1000, delay: 500 },
+        baseTime: 15
+    };
+
+    let data = { ...initialData };
+    let gameInterval, autoInterval, currentRoundTime, maxRoundTime;
+
+    function saveGame() {
+        localStorage.setItem('footballJugglerSave_v3', JSON.stringify(data));
+    }
+
+    function loadGame() {
+        const savedData = localStorage.getItem('footballJugglerSave_v3');
+        if (savedData) {
+            const parsed = JSON.parse(savedData);
+            data = { ...initialData, ...parsed };
+            data.costs = { ...initialData.costs, ...parsed.costs };
+        }
+    }
+
+    function resetGame() {
+        if (confirm('Удалить весь прогресс?')) {
+            localStorage.removeItem('footballJugglerSave_v3');
+            location.reload();
+        }
+    }
+
+    function updateUI() {
+        document.getElementById('total-xp').innerText = Math.floor(data.xp);
+        document.getElementById('cost-click').innerText = data.costs.click;
+        document.getElementById('cost-auto').innerText = data.costs.auto;
+        document.getElementById('cost-crit').innerText = data.costs.crit;
+        document.getElementById('cost-time').innerText = data.costs.time;
+        document.getElementById('cost-delay').innerText = data.costs.delay;
+        
+        document.getElementById('crit-chance-ui').innerText = data.critChance;
+        document.getElementById('crit-ui-game').innerText = data.critChance;
+        document.getElementById('delay-ui').innerText = data.timeDelayChance;
+        document.getElementById('bonus-time-ui').innerText = data.extraTime + "с";
+        document.getElementById('auto-val').innerText = data.autoPower;
+
+        // Условие появления секретных апгрейдов (после 1000 XP)
+        if (data.xp >= 1000 || data.extraTime > 0 || data.timeDelayChance > 0) {
+            document.getElementById('upg-time-container').style.display = 'block';
+            document.getElementById('upg-delay-container').style.display = 'block';
+        }
+
+        const upgBtns = document.querySelectorAll('.upgrade');
+        upgBtns[0].disabled = data.xp < data.costs.click;
+        upgBtns[1].disabled = data.xp < data.costs.auto;
+        upgBtns[2].disabled = data.xp < data.costs.crit;
+        upgBtns[3].disabled = data.xp < data.costs.time;
+        upgBtns[4].disabled = data.xp < data.costs.delay;
+    }
+
+    function startGame() {
+        data.currentScore = 0;
+        maxRoundTime = data.baseTime + data.extraTime;
+        currentRoundTime = maxRoundTime;
+        
+        document.getElementById('menu-screen').classList.remove('active');
+        document.getElementById('game-screen').classList.add('active');
+        updateUI();
+
+        gameInterval = setInterval(() => {
+            currentRoundTime--;
+            refreshTimerDisplay();
+
+            if (currentRoundTime <= 0) stopGame();
+        }, 1000);
+
+        autoInterval = setInterval(() => {
+            if(data.autoPower > 0) {
+                data.currentScore += data.autoPower / 10;
+                document.getElementById('current-score').innerText = Math.floor(data.currentScore);
+            }
+        }, 100);
+    }
+
+    function refreshTimerDisplay() {
+        const timerText = document.getElementById('timer-text');
+        timerText.innerText = `Осталось: ${currentRoundTime}с`;
+        // Полоска прогресса (не может быть больше 100%)
+        let percent = (currentRoundTime / maxRoundTime) * 100;
+        document.getElementById('progress').style.width = Math.min(percent, 100) + '%';
+    }
+
+    function stopGame() {
+        clearInterval(gameInterval);
+        clearInterval(autoInterval);
+        const earned = Math.floor(data.currentScore);
+        data.xp += earned;
+        saveGame();
+        alert(`Время вышло! Набито мячей: ${earned}`);
+        document.getElementById('game-screen').classList.remove('active');
+        document.getElementById('menu-screen').classList.add('active');
+        updateUI();
+    }
+
+    function handleKick() {
+        let gain = data.clickPower;
+        
+        // 1. Проверка на Крит
+        if (Math.random() * 100 < data.critChance) {
+            gain *= 2;
+            const scoreEl = document.getElementById('current-score');
+            scoreEl.classList.add('crit-flash');
+            setTimeout(() => scoreEl.classList.remove('crit-flash'), 150);
+        }
+
+        // 2. Проверка на Затяжку времени (+1с)
+        if (Math.random() * 100 < data.timeDelayChance) {
+            currentRoundTime += 1;
+            const timerText = document.getElementById('timer-text');
+            timerText.classList.add('time-bonus');
+            setTimeout(() => timerText.classList.remove('time-bonus'), 300);
+            refreshTimerDisplay();
+        }
+
+        data.currentScore += gain;
+        document.getElementById('current-score').innerText = Math.floor(data.currentScore);
+    }
+
+    function buyUpgrade(type) {
+        if (data.xp >= data.costs[type]) {
+            data.xp -= data.costs[type];
+            
+            if (type === 'click') {
+                data.clickPower += 1;
+                data.costs.click = Math.floor(data.costs.click * 1.5);
+            } else if (type === 'auto') {
+                data.autoPower += 2;
+                data.costs.auto = Math.floor(data.costs.auto * 1.6);
+            } else if (type === 'crit') {
+                data.critChance += 1;
+                data.costs.crit = Math.floor(data.costs.crit * 2.1);
+            } else if (type === 'time') {
+                data.extraTime += 1;
+                // Резкий скачок цены для времени: 1000 -> 5000 -> 15000...
+                if (data.costs.time === 1000) data.costs.time = 5000;
+                else data.costs.time = Math.floor(data.costs.time * 3);
+            } else if (type === 'delay') {
+                data.timeDelayChance += 1;
+                data.costs.delay = Math.floor(data.costs.delay * 2.2);
+            }
+            
+            saveGame();
+            updateUI();
+        }
+    }
+
+    loadGame();
+    updateUI();
+</script>
+</body>
+</html>

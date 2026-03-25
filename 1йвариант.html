@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Football Juggler: Match Day</title>
+    <style>
+        body { 
+            background: #4a59d8; color: white; 
+            font-family: 'Segoe UI', Tahoma, sans-serif; 
+            display: flex; align-items: center; justify-content: center; 
+            height: 100vh; margin: 0; overflow: hidden; user-select: none;
+        }
+        .container { text-align: center; width: 600px; }
+        .screen { display: none; }
+        .active { display: block; }
+
+        /* ГАЗОН (ИГРОВОЕ ПОЛЕ) */
+        #game-screen {
+            background: #27ae60;
+            background-image: radial-gradient(circle, rgba(255,255,255,0.2) 2px, transparent 2px),
+                              linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px);
+            background-size: 100% 100%, 100% 50px;
+            border: 10px solid #1e8449;
+            border-radius: 20px;
+            position: relative;
+            height: 500px;
+            box-shadow: inset 0 0 100px rgba(0,0,0,0.2);
+        }
+        /* Разметка круга */
+        #game-screen::after {
+            content: ''; position: absolute; top: 50%; left: 50%;
+            width: 120px; height: 120px; border: 4px solid rgba(255,255,255,0.3);
+            border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none;
+        }
+
+        /* ЦИФРОВОЙ СЕКУНДОМЕР */
+        .stopwatch {
+            font-family: monospace; font-size: 3rem; color: #fff;
+            background: rgba(0,0,0,0.5); padding: 10px 20px;
+            border-radius: 10px; display: inline-block; margin-top: 20px;
+            border: 2px solid #fff; min-width: 200px;
+        }
+
+        /* ПАНЕЛЬ НАВЫКОВ В ИГРЕ */
+        .stats-panel {
+            position: absolute; top: 20px; left: 20px; text-align: left;
+            background: rgba(0,0,0,0.4); padding: 10px; border-radius: 8px;
+            font-size: 0.8rem; border-left: 4px solid #ffc107;
+        }
+        .stats-panel div { margin-bottom: 3px; }
+
+        /* ДЕРЕВО НАВЫКОВ (МЕНЮ) */
+        .tree-viewport { position: relative; height: 380px; width: 500px; margin: 20px auto; }
+        .skill-node {
+            position: absolute; width: 75px; height: 75px; background: #ffc107; color: black;
+            border: 5px solid black; border-radius: 18px; display: none;
+            flex-direction: column; align-items: center; justify-content: center;
+            cursor: pointer; font-weight: bold; transition: 0.3s; z-index: 2;
+        }
+        .skill-node.visible { display: flex; }
+        .skill-node span { font-size: 1.4rem; }
+        .skill-node small { font-size: 0.6rem; }
+        
+        /* Координаты узлов */
+        #node-1 { left: 212px; top: 260px; display: flex; } 
+        #node-2 { left: 90px;  top: 260px; }
+        #node-3 { left: 334px; top: 260px; }
+        #node-4 { left: 334px; top: 145px; }
+        #node-5 { left: 334px; top: 30px;  }
+        #node-6 { left: 450px; top: 145px; }
+
+        .line { position: absolute; background: black; z-index: 1; display: none; }
+        .line.visible { display: block; }
+        .h-line { height: 5px; top: 295px; }
+        .v-line { width: 5px; left: 369px; }
+
+        /* МЯЧ */
+        #kick-me { 
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 140px; height: 140px; border-radius: 50%; background: white; 
+            font-size: 5rem; border: none; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3); transition: transform 0.05s;
+        }
+        #kick-me:active { transform: translate(-50%, -60%) scale(1.1); }
+
+        .xp-display { font-size: 2.2rem; color: #ffc107; font-weight: bold; text-shadow: 3px 3px 0px black; }
+        #start-btn { 
+            background: #2ed573; border: 4px solid black; padding: 12px 35px; 
+            font-weight: bold; font-size: 1.3rem; border-radius: 12px; cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="menu-screen" class="screen active">
+        <h1 style="margin:0; font-size: 1.5rem; text-shadow: 2px 2px black;">FOOTBALL CLICKER</h1>
+        <div class="xp-display"><span id="total-xp">0</span> XP</div>
+        <div class="tree-viewport">
+            <div id="l-1-2" class="line h-line" style="left: 165px; width: 47px;"></div>
+            <div id="l-1-3" class="line h-line" style="left: 287px; width: 47px;"></div>
+            <div id="l-3-4" class="line v-line" style="top: 220px; height: 40px;"></div>
+            <div id="l-4-5" class="line v-line" style="top: 105px; height: 40px;"></div>
+            <div id="l-4-6" class="line h-line" style="top: 180px; left: 409px; width: 41px;"></div>
+
+            <div id="node-1" class="skill-node visible" onclick="buySkill('click')"><small>СИЛА</small><span id="lvl-1">1</span><small id="cost-1">10</small></div>
+            <div id="node-2" class="skill-node" onclick="buySkill('auto')"><small>ДРУГ</small><span id="lvl-2">0</span><small id="cost-2">50</small></div>
+            <div id="node-3" class="skill-node" onclick="buySkill('crit')"><small>КРИТ</small><span id="lvl-3">0</span><small id="cost-3">100</small></div>
+            <div id="node-4" class="skill-node" onclick="buySkill('time')"><small>ВРЕМЯ</small><span id="lvl-4">0</span><small id="cost-4">1000</small></div>
+            <div id="node-5" class="skill-node" onclick="buySkill('delay')"><small>ЗАТЯЖКА</small><span id="lvl-5">0</span><small id="cost-5">2000</small></div>
+            <div id="node-6" class="skill-node" onclick="buySkill('gold')"><small>ЗОЛОТО</small><span id="lvl-6">0</span><small id="cost-6">5000</small></div>
+        </div>
+        <button id="start-btn" onclick="startGame()">ВЫЙТИ НА ПОЛЕ</button>
+    </div>
+
+    <div id="game-screen" class="screen">
+        <div class="stats-panel">
+            <div>Сила удара: <b id="st-click">1</b></div>
+            <div>Крит. шанс: <b id="st-crit">0</b>%</div>
+            <div>Авто-набивание: <b id="st-auto">0</b>/с</div>
+            <div id="st-gold-cont" style="display:none; color:#f1c40f">Золотой шанс: <b id="st-gold">0</b>%</div>
+        </div>
+
+        <div class="stopwatch" id="timer-display">00:15:00</div>
+        
+        <div style="font-size: 2rem; margin-top: 10px;">СЧЕТ: <b id="current-score">0</b></div>
+        
+        <button id="kick-me" onclick="handleKick()">⚽</button>
+    </div>
+</div>
+
+<script>
+    const config = { baseTime: 15 };
+    let data = {
+        xp: 0,
+        lvls: { click: 1, auto: 0, crit: 0, time: 0, delay: 0, gold: 0 },
+        costs: { click: 10, auto: 50, crit: 100, time: 1000, delay: 2000, gold: 5000 }
+    };
+
+    let gameInterval, autoInterval, currentMs;
+
+    function save() { localStorage.setItem('fbJugglerMatch', JSON.stringify(data)); }
+    function load() {
+        const saved = localStorage.getItem('fbJugglerMatch');
+        if (saved) data = JSON.parse(saved);
+    }
+
+    function formatTime(ms) {
+        let s = Math.floor(ms / 1000);
+        let m = Math.floor(ms % 1000 / 10);
+        return `00:${s.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+    }
+
+    function updateUI() {
+        document.getElementById('total-xp').innerText = Math.floor(data.xp);
+        
+        const nodeMap = [
+            { id: 'node-1', key: 'click',  v: true },
+            { id: 'node-2', key: 'auto',   v: data.lvls.click >= 1, l: 'l-1-2' },
+            { id: 'node-3', key: 'crit',   v: data.lvls.click >= 1, l: 'l-1-3' },
+            { id: 'node-4', key: 'time',   v: data.lvls.crit >= 1,  l: 'l-3-4' },
+            { id: 'node-5', key: 'delay',  v: data.lvls.time >= 1,  l: 'l-4-5' },
+            { id: 'node-6', key: 'gold',   v: data.lvls.time >= 1,  l: 'l-4-6' }
+        ];
+
+        nodeMap.forEach((n, i) => {
+            const el = document.getElementById(n.id);
+            if (n.v) {
+                el.classList.add('visible');
+                if (n.l) document.getElementById(n.l).classList.add('visible');
+            }
+            document.getElementById(`lvl-${i+1}`).innerText = data.lvls[n.key];
+            document.getElementById(`cost-${i+1}`).innerText = data.costs[n.key];
+            el.style.opacity = (data.xp < data.costs[n.key]) ? "0.5" : "1";
+        });
+
+        // Обновление статов для игрового экрана
+        document.getElementById('st-click').innerText = data.lvls.click;
+        document.getElementById('st-crit').innerText = data.lvls.crit;
+        document.getElementById('st-auto').innerText = data.lvls.auto * 2;
+        if (data.lvls.gold > 0) {
+            document.getElementById('st-gold-cont').style.display = 'block';
+            document.getElementById('st-gold').innerText = data.lvls.gold;
+        }
+    }
+
+    function buySkill(type) {
+        if (data.xp >= data.costs[type]) {
+            data.xp -= data.costs[type];
+            data.lvls[type]++;
+            data.costs[type] = Math.floor(data.costs[type] * 1.8);
+            save();
+            updateUI();
+        }
+    }
+
+    function startGame() {
+        data.currentScore = 0;
+        currentMs = (config.baseTime + data.lvls.time) * 1000;
+        document.getElementById('menu-screen').classList.remove('active');
+        document.getElementById('game-screen').classList.add('active');
+        
+        gameInterval = setInterval(() => {
+            currentMs -= 50;
+            document.getElementById('timer-display').innerText = formatTime(currentMs);
+            if (currentMs <= 0) stopGame();
+        }, 50);
+
+        autoInterval = setInterval(() => {
+            if(data.lvls.auto > 0) {
+                data.currentScore += (data.lvls.auto * 2) / 10;
+                document.getElementById('current-score').innerText = Math.floor(data.currentScore);
+            }
+        }, 100);
+    }
+
+    function stopGame() {
+        clearInterval(gameInterval); clearInterval(autoInterval);
+        data.xp += Math.floor(data.currentScore);
+        save();
+        document.getElementById('game-screen').classList.remove('active');
+        document.getElementById('menu-screen').classList.add('active');
+        updateUI();
+    }
+
+    function handleKick() {
+        let gain = data.lvls.click;
+        if (Math.random() * 100 < data.lvls.crit) gain *= 2;
+        if (data.lvls.gold > 0 && Math.random() * 100 < data.lvls.gold) gain *= 10;
+        if (data.lvls.delay > 0 && Math.random() * 100 < data.lvls.delay) {
+            currentMs += 1000; // Добавляем секунду
+        }
+
+        data.currentScore += gain;
+        document.getElementById('current-score').innerText = Math.floor(data.currentScore);
+    }
+
+    load();
+    updateUI();
+</script>
+</body>
+</html>

@@ -1,0 +1,553 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Football Tycoon: Core Fix</title>
+    <style>
+      body {
+        background: #0d1f0d;
+        color: white;
+        font-family: "Segoe UI", sans-serif;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        margin: 0;
+        overflow: hidden;
+        user-select: none;
+      }
+      .container {
+        text-align: center;
+        width: 1100px;
+      }
+      .screen {
+        display: none;
+      }
+      .active {
+        display: block;
+      }
+
+      .admin-panel {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        background: rgba(255, 255, 255, 0.1);
+        padding: 10px;
+        border-radius: 10px;
+        border: 1px dashed #666;
+        z-index: 100;
+      }
+      .admin-btn {
+        background: #444;
+        color: #fff;
+        border: 1px solid #666;
+        padding: 8px 12px;
+        cursor: pointer;
+        font-size: 0.7rem;
+        border-radius: 5px;
+      }
+
+      .currency-bar {
+        display: flex;
+        justify-content: center;
+        gap: 30px;
+        margin-bottom: 10px;
+        padding: 10px;
+        background: rgba(0, 0, 0, 0.6);
+        border-radius: 30px;
+        border: 1px solid #2ecc71;
+      }
+      .xp-val {
+        color: #3498db;
+        font-weight: bold;
+        font-size: 1.3rem;
+      }
+      .coin-val {
+        color: #f1c40f;
+        font-weight: bold;
+        font-size: 1.3rem;
+      }
+
+      .tree-viewport {
+        position: relative;
+        height: 750px;
+        width: 1050px;
+        margin: 10px auto;
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 20px;
+        border: 2px solid #2ecc71;
+        overflow-y: auto;
+      }
+      
+      /* СТИЛЬ ВЫЛЕТАЮЩИХ ЦИФР */
+      .floating-xp {
+        position: absolute;
+        pointer-events: none;
+        font-weight: bold;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        animation: floatUp 0.8s ease-out forwards;
+        z-index: 1000;
+      }
+      @keyframes floatUp {
+        0% { transform: translateY(0); opacity: 1; }
+        100% { transform: translateY(-120px); opacity: 0; }
+      }
+
+      .skill-node {
+        position: absolute;
+        width: 90px;
+        height: 90px;
+        background: #27ae60;
+        border: 2px solid #0d1f0d;
+        border-radius: 14px;
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: 0.3s;
+        z-index: 5;
+        line-height: 1.1;
+      }
+      .skill-node.visible {
+        display: flex;
+      }
+      .skill-node.disabled {
+        background: #333 !important;
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .skill-node.maxed {
+        background: #f1c40f !important;
+        border-color: #fff;
+        box-shadow: 0 0 15px #f1c40f;
+      }
+      .skill-node.maxed * {
+        color: #000 !important;
+      }
+
+      .skill-node small {
+        font-size: 0.52rem;
+        text-transform: uppercase;
+        margin-bottom: 4px;
+        font-weight: bold;
+        text-align: center;
+      }
+      .skill-node span {
+        font-size: 0.85rem;
+      }
+      .price-xp {
+        color: #3498db;
+        font-size: 0.75rem;
+        font-weight: bold;
+        margin-top: 4px;
+      }
+      .price-coin {
+        color: #f1c40f;
+        font-size: 0.75rem;
+        font-weight: bold;
+        margin-top: 4px;
+      }
+
+      #game-screen {
+        background: #1a4a1a;
+        border-radius: 20px;
+        padding: 20px;
+        border: 4px solid #2ecc71;
+        position: relative;
+      }
+      .stats-panel {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        text-align: left;
+        background: rgba(0, 0, 0, 0.85);
+        padding: 15px;
+        border-radius: 12px;
+        font-size: 0.82rem;
+        border: 2px solid #2ecc71;
+        width: 230px;
+      }
+      .stats-item {
+        margin-bottom: 5px;
+        border-bottom: 1px solid rgba(46, 204, 113, 0.2);
+        padding-bottom: 3px;
+      }
+      .stats-item b {
+        color: #2ecc71;
+        float: right;
+      }
+
+      #timer-text {
+        font-family: "Courier New", monospace;
+        font-size: 2.2rem;
+        font-weight: bold;
+        color: #e74c3c;
+        margin: 10px;
+      }
+      #time-bonus {
+        position: absolute;
+        right: -50px;
+        top: 0;
+        color: #2ecc71;
+        font-weight: bold;
+        opacity: 0;
+        transition: 0.3s;
+      }
+      .show-bonus {
+        opacity: 1 !important;
+        transform: translateY(-10px);
+      }
+
+      /* ОБНОВЛЕННЫЙ МЯЧ */
+      #kick-me {
+        width: 160px;
+        height: 160px;
+        background: none;
+        border: none;
+        outline: none;
+        cursor: pointer;
+        font-size: 6rem;
+        margin: 15px auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        --angle: 0deg;
+        transform: rotate(var(--angle));
+        animation: ballIdle 4s ease-in-out infinite;
+      }
+
+      #kick-me:active {
+        transform: rotate(var(--angle)) scale(0.8) !important;
+        transition: transform 0.05s;
+      }
+
+      @keyframes ballIdle {
+        0%, 100% { transform: rotate(var(--angle)) translateY(0); }
+        50% { transform: rotate(var(--angle)) translateY(-8px); }
+      }
+
+      #progress {
+        height: 12px;
+        background: #e74c3c;
+        width: 100%;
+        border-radius: 6px;
+      }
+
+      #score-container {
+        font-size: 3rem;
+        transition: color 0.2s;
+        color: white;
+      }
+
+      #summary-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.9);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+      }
+      .summary-card {
+        background: #1e1e1e;
+        border: 3px solid #2ecc71;
+        border-radius: 20px;
+        padding: 30px;
+        width: 400px;
+      }
+      .summary-row {
+        display: flex;
+        justify-content: space-between;
+        margin: 10px 0;
+        font-size: 1.1rem;
+        border-bottom: 1px solid #333;
+        padding-bottom: 5px;
+      }
+
+      /* Координаты узлов */
+      #node-click { left: 480px; top: 300px; border: 3px solid #fff; }
+      #node-auto { left: 360px; top: 300px; }
+      #node-pro { left: 240px; top: 300px; }
+      #node-fCrit { left: 360px; top: 420px; }
+      #node-fCoin { left: 360px; top: 540px; }
+      #node-delay { left: 600px; top: 300px; }
+      #node-time { left: 720px; top: 300px; }
+      #node-crit { left: 480px; top: 420px; }
+      #node-cCoin { left: 600px; top: 420px; }
+      #node-midas { left: 480px; top: 540px; }
+      #node-mCrit { left: 480px; top: 660px; }
+      #node-viewer { left: 480px; top: 180px; }
+      #node-v-stand { left: 360px; top: 180px; }
+      #node-f-sec { left: 240px; top: 180px; }
+      #node-v-luck { left: 600px; top: 180px; }
+      #node-fan { left: 480px; top: 60px; }
+      #node-attr { left: 360px; top: 60px; }
+      #node-drink { left: 600px; top: 60px; }
+    </style>
+  </head>
+  <body>
+    <div class="admin-panel" id="admin-ui">
+      <button class="admin-btn" onclick="addRes('xp', 10000)">+10000 XP</button>
+      <button class="admin-btn" onclick="addRes('coins', 1000)">+1000 Coins</button>
+    </div>
+
+    <div id="summary-overlay">
+      <div class="summary-card">
+        <h2 style="color: #2ecc71; margin-top: 0; text-align: center">МАТЧ ЗАВЕРШЕН!</h2>
+        <div class="summary-row"><span>⏱ Время:</span> <b id="res-time">0s</b></div>
+        <div class="summary-row"><span style="color: #3498db">🔹 XP:</span> <b id="res-xp-total">0</b></div>
+        <div class="summary-row"><span style="color: #f1c40f">🟡 Coins:</span> <b id="res-coin-total">0</b></div>
+        <button onclick="closeSummary()" style="background: #2ecc71; color: white; border: none; padding: 12px; font-weight: bold; border-radius: 10px; cursor: pointer; margin-top: 20px; width: 100%;">В МЕНЮ</button>
+      </div>
+    </div>
+
+    <div class="container">
+      <div id="menu-screen" class="screen active">
+        <div class="currency-bar">
+          <div class="xp-val">🔹 <span id="total-xp">0</span></div>
+          <div class="coin-val">🟡 <span id="total-coins">0</span></div>
+        </div>
+        <div class="tree-viewport" id="tree"></div>
+        <button onclick="startGame()" style="background: #2ecc71; color: white; border: none; padding: 15px 60px; font-weight: bold; border-radius: 50px; cursor: pointer;">НАЧАТЬ МАТЧ</button>
+      </div>
+
+      <div id="game-screen" class="screen">
+        <div class="stats-panel" id="live-stats"></div>
+        <div style="background: #222; border-radius: 6px; width: 50%; margin: auto"><div id="progress"></div></div>
+        <div class="timer-container">
+          <div id="timer-text">00:00:00</div>
+          <div id="time-bonus">+1s</div>
+        </div>
+        <div id="score-container">⚽ <span id="current-score">0</span></div>
+        <button id="kick-me" onclick="handleKick(event)">⚽</button>
+        <div id="game-coins" style="color: #f1c40f; font-weight: bold; font-size: 1.5rem; margin-top: 10px;">🟡 0</div>
+      </div>
+    </div>
+
+    <script>
+      let data = {
+        xp: 0, coins: 0,
+        lvls: { click: 1, auto: 0, pro: 0, fCrit: 0, fCoin: 0, crit: 0, cCoin: 0, delay: 0, time: 0, viewer: 0, vLuck: 0, vStand: 0, fSec: 0, fan: 0, attr: 0, drink: 0, midas: 0, mCrit: 0 },
+        max: { click: 10, auto: 5, pro: 5, fCrit: 3, fCoin: 3, crit: 3, cCoin: 3, delay: 3, time: 3, viewer: 5, vLuck: 3, vStand: 5, fSec: 5, fan: 5, attr: 5, drink: 5, midas: 3, mCrit: 3 },
+        costs: { click: 10, auto: 100, pro: 50, fCrit: 40, fCoin: 150, crit: 300, cCoin: 400, delay: 100, time: 100, viewer: 150, vLuck: 25, vStand: 100, fSec: 750, fan: 250, attr: 150, drink: 150, midas: 2000, mCrit: 500 }
+      };
+
+      const nodeData = [
+        { id: "node-click", k: "click", name: "СИЛА УДАРА", cur: "xp", desc: "Увеличивает количество 🔹 за клик" },
+        { id: "node-auto", k: "auto", name: "ДРУГ", cur: "xp", desc: "Авто-доход +1🔹/с" },
+        { id: "node-pro", k: "pro", name: "ПРОФИ", cur: "coin", desc: "Авто-доход +5🔹/с" },
+        { id: "node-fCrit", k: "fCrit", name: "КРИТ ДРУГА", cur: "coin", desc: "Шанс друга на x3 🔹" },
+        { id: "node-fCoin", k: "fCoin", name: "МОНЕТА ДРУГА", cur: "coin", desc: "Шанс друга на 🟡" },
+        { id: "node-delay", k: "delay", name: "ЗАТЯЖКА", cur: "xp", desc: "Шанс на +1 сек" },
+        { id: "node-time", k: "time", name: "ВРЕМЯ", cur: "coin", desc: "+1с к таймеру" },
+        { id: "node-crit", k: "crit", name: "ШАНС КРИТА", cur: "xp", desc: "Шанс на удар x3 🔹" },
+        { id: "node-cCoin", k: "cCoin", name: "КРИТ-МОНЕТА", cur: "coin", desc: "Шанс на 🟡 при крите" },
+        { id: "node-midas", k: "midas", name: "ДОП. ДОХОД", cur: "xp", desc: "Шанс на 🟡 каждые 5с" },
+        { id: "node-mCrit", k: "mCrit", name: "КРИТ ДОХОДА", cur: "coin", desc: "Шанс на x2 🟡" },
+        { id: "node-viewer", k: "viewer", name: "ЗРИТЕЛЬ", cur: "xp", desc: "+1🟡 за матч" },
+        { id: "node-v-stand", k: "vStand", name: "ТРИБУНА", cur: "coin", desc: "+10 Зрителей" },
+        { id: "node-f-sec", k: "fSec", name: "ФАН-СЕКТОР", cur: "coin", desc: "+5 Фанатов" },
+        { id: "node-v-luck", k: "vLuck", name: "ЩЕДРОСТЬ", cur: "coin", desc: "Шанс на доп. 🟡" },
+        { id: "node-fan", k: "fan", name: "ФАНАТ", cur: "coin", desc: "+5🟡 за матч" },
+        { id: "node-attr", k: "attr", name: "АТРИБУТИКА", cur: "coin", desc: "+3🟡 за фаната" },
+        { id: "node-drink", k: "drink", name: "НАПИТКИ", cur: "coin", desc: "+1🟡 за каждого" }
+      ];
+
+      // ФУНКЦИЯ ВЫЛЕТА ЦИФР
+      function spawnFloatingText(text, x, y, isCrit = false, isCoin = false) {
+        const el = document.createElement("div");
+        el.className = "floating-xp";
+        if (isCoin) {
+          el.innerHTML = text + " 🟡";
+          el.style.color = "#f1c40f";
+          el.style.fontSize = "1.8rem";
+        } else {
+          el.innerHTML = text + " 🔹";
+          if (isCrit) {
+            el.style.color = "#e74c3c";
+            el.style.fontSize = "2.5rem";
+            el.style.zIndex = "110";
+          } else {
+            el.style.color = "#3498db";
+            el.style.fontSize = "1.5rem";
+          }
+        }
+        el.style.left = (x - 20) + "px";
+        el.style.top = (y - 40) + "px";
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 800);
+      }
+
+      function initTree() {
+        const tree = document.getElementById("tree");
+        nodeData.forEach((n) => {
+          const div = document.createElement("div");
+          div.id = n.id;
+          div.className = "skill-node";
+          div.title = n.desc;
+          div.onclick = () => buy(n.k, n.cur);
+          div.innerHTML = `<small>${n.name}</small><span id="lvl-${n.k}">0/0</span><b class="price-${n.cur}" id="c-${n.k}">0</b>`;
+          tree.appendChild(div);
+        });
+      }
+
+      function updateUI() {
+        document.getElementById("total-xp").innerText = Math.floor(data.xp);
+        document.getElementById("total-coins").innerText = Math.floor(data.coins);
+        nodeData.forEach((n) => {
+          const el = document.getElementById(n.id);
+          const isMax = data.lvls[n.k] >= data.max[n.k];
+          let canSee = n.k === "click" || data.lvls.click >= 2;
+          if (n.k === "pro" || n.k === "fCrit") canSee = data.lvls.auto >= 1;
+          if (n.k === "fCoin") canSee = data.lvls.fCrit >= 1;
+          if (n.k === "delay") canSee = data.lvls.click >= 2;
+          if (n.k === "time") canSee = data.lvls.delay >= 1;
+          if (n.k === "crit") canSee = data.lvls.click >= 2;
+          if (n.k === "midas" || n.k === "cCoin") canSee = data.lvls.crit >= 1;
+          if (n.k === "mCrit") canSee = data.lvls.midas >= 1;
+          if (n.k === "vStand" || n.k === "vLuck" || n.k === "fan") canSee = data.lvls.viewer >= 1;
+          if (n.k === "fSec") canSee = data.lvls.vStand >= 1;
+          if (n.k === "attr" || n.k === "drink") canSee = data.lvls.fan >= 1;
+
+          if (canSee) el.classList.add("visible");
+          el.classList.toggle("maxed", isMax);
+          document.getElementById(`lvl-${n.k}`).innerText = isMax ? "MAX" : `${data.lvls[n.k]}/${data.max[n.k]}`;
+          let icon = n.cur === "xp" ? "🔹" : "🟡";
+          document.getElementById(`c-${n.k}`).innerHTML = isMax ? "✓" : `${icon} ${data.costs[n.k]}`;
+          if (!isMax) {
+            let afford = (n.cur === "xp" ? data.xp : data.coins) >= data.costs[n.k];
+            el.classList.toggle("disabled", !afford);
+          }
+        });
+      }
+
+      function buy(type, cur) {
+        if (data.lvls[type] >= data.max[type]) return;
+        if (data[cur === "xp" ? "xp" : "coins"] >= data.costs[type]) {
+          data[cur === "xp" ? "xp" : "coins"] -= data.costs[type];
+          data.lvls[type]++;
+          data.costs[type] = Math.ceil(data.costs[type] * 2.2);
+          updateUI();
+        }
+      }
+
+      let gInt, aInt, bInt, curMs, totalEl, sCoins, sClick, sAuto;
+
+      function startGame() {
+        sClick = sAuto = sCoins = totalEl = 0;
+        let maxT = (11 + data.lvls.time) * 1000;
+        curMs = maxT;
+        document.getElementById("admin-ui").style.display = "none";
+        document.getElementById("menu-screen").classList.remove("active");
+        document.getElementById("game-screen").classList.add("active");
+
+        gInt = setInterval(() => {
+          curMs -= 10; totalEl += 10;
+          document.getElementById("timer-text").innerText = fmt(curMs);
+          document.getElementById("progress").style.width = (curMs / maxT) * 100 + "%";
+          if (curMs <= 0) stopGame();
+        }, 10);
+
+        aInt = setInterval(() => {
+          sAuto += (data.lvls.auto * 2 + data.lvls.pro * 5) / 10;
+          document.getElementById("current-score").innerText = Math.floor(sClick + sAuto);
+        }, 100);
+
+        bInt = setInterval(() => {
+          let b = 0;
+          if (data.lvls.midas > 0 && Math.random() * 100 < data.lvls.midas)
+            b += Math.random() * 100 < [0, 5, 10, 20][data.lvls.mCrit] ? 2 : 1;
+          if (Math.random() * 100 < [0, 5, 10, 20][data.lvls.fCoin]) b++;
+          if (data.lvls.vLuck > 0) {
+            let v = data.lvls.viewer + data.lvls.vStand * 10;
+            for (let i = 0; i < v; i++) if (Math.random() * 100 < data.lvls.vLuck) b++;
+          }
+          sCoins += b;
+          document.getElementById("game-coins").innerText = `🟡 ${sCoins}`;
+        }, 5000);
+
+        document.getElementById("live-stats").innerHTML = `
+            <div class="stats-item">Сила удара <b>${data.lvls.click} 🔹</b></div>
+            <div class="stats-item">Партнёры <b>${data.lvls.auto * 2 + data.lvls.pro * 5}🔹/с</b></div>
+            <div class="stats-item">Шанс крита <b>${data.lvls.crit}%</b></div>
+            <div class="stats-item">Затяжка <b>${[0, 0.5, 1, 2][data.lvls.delay]}%</b></div>
+        `;
+      }
+
+      function handleKick(event) {
+        let ball = document.getElementById("kick-me");
+        let randomDeg = Math.floor(Math.random() * 360) - 180;
+        ball.style.setProperty("--angle", randomDeg + "deg");
+
+        let p = data.lvls.click;
+        let isCrit = false;
+        
+        // КРИТ
+        if (Math.random() * 100 < data.lvls.crit) {
+          p *= 3;
+          isCrit = true;
+          // КРИТ-МОНЕТА
+          if (Math.random() * 100 < [0, 25, 50, 75][data.lvls.cCoin]) {
+            sCoins++;
+            spawnFloatingText("+1", event.pageX + 30, event.pageY - 20, false, true);
+          }
+        }
+
+        // ЗАТЯЖКА
+        if (Math.random() * 100 < [0, 0.5, 1, 2][data.lvls.delay]) {
+          curMs += 1000;
+          let b = document.getElementById("time-bonus");
+          b.classList.add("show-bonus");
+          setTimeout(() => b.classList.remove("show-bonus"), 500);
+        }
+
+        sClick += p;
+        spawnFloatingText("+" + p, event.pageX, event.pageY, isCrit);
+        document.getElementById("current-score").innerText = Math.floor(sClick + sAuto);
+        document.getElementById("game-coins").innerText = `🟡 ${sCoins}`;
+      }
+
+      function stopGame() {
+        clearInterval(gInt); clearInterval(aInt); clearInterval(bInt);
+        let vC = data.lvls.viewer + data.lvls.vStand * 10;
+        let fC = data.lvls.fan + data.lvls.fSec * 5;
+        let cBase = vC * 1 + fC * 5;
+        let cExtra = data.lvls.attr * fC * 3 + data.lvls.drink * (vC + fC);
+
+        document.getElementById("res-time").innerText = (totalEl / 1000).toFixed(1) + "s";
+        document.getElementById("res-xp-total").innerText = Math.floor(sClick + sAuto);
+        document.getElementById("res-coin-total").innerText = sCoins + cBase + cExtra;
+
+        data.xp += sClick + sAuto;
+        data.coins += sCoins + cBase + cExtra;
+        document.getElementById("summary-overlay").style.display = "flex";
+      }
+
+      function closeSummary() {
+        document.getElementById("summary-overlay").style.display = "none";
+        document.getElementById("game-screen").classList.remove("active");
+        document.getElementById("menu-screen").classList.add("active");
+        document.getElementById("admin-ui").style.display = "flex";
+        updateUI();
+      }
+
+      function addRes(type, amt) { data[type] += amt; updateUI(); }
+      function fmt(ms) {
+        let t = Math.max(0, ms);
+        let m = Math.floor(t / 60000), s = Math.floor((t % 60000) / 1000), c = Math.floor((t % 1000) / 10);
+        return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}:${c.toString().padStart(2, "0")}`;
+      }
+
+      initTree();
+      updateUI();
+    </script>
+  </body>
+</html>

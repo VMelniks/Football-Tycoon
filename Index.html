@@ -1,0 +1,2303 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Football Tycoon</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap");
+
+      /* ... (весь твой CSS без изменений до координат узлов) ... */
+      body {
+        background: #0d1f0d;
+        color: white;
+        /* ЗАМЕНЯЕМ ШРИФТ НА ПИКСЕЛЬНЫЙ */
+        font-family: "Press Start 2P", cursive;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        margin: 0;
+        overflow: hidden;
+        user-select: none;
+        /* Уменьшим базовый размер, так как пиксельные шрифты крупнее */
+        font-size: 10px;
+      }
+
+      /* Применяем шрифт к конкретным блокам */
+      .currency-bar,
+      .stats-panel,
+      #score-container,
+      #game-coins {
+        font-family: "Press Start 2P", cursive;
+        /* Черная пиксельная обводка (резкая тень) */
+        text-shadow:
+          -1px -1px 0 #000,
+          1px -1px 0 #000,
+          -1px 1px 0 #000,
+          1px 1px 0 #000,
+          2px 2px 0 #000; /* И небольшая тень для объема */
+      }
+
+      /* Делаем шрифт в статах немного меньше, чтобы всё влезло */
+ .stats-panel {
+        font-size: 8px;
+        line-height: 1.6;
+      }
+
+.container {
+  text-align: center;
+  width: 1200px;
+  margin: 0 auto;
+}
+      /* Стили для экрана настройки */
+#custom-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle, #2c3e50, #000);
+    display: none; /* По умолчанию скрыт */
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000; /* Самый высокий слой */
+}
+
+#custom-screen.active {
+    display: flex; /* Показываем, когда есть класс active */
+}
+
+.custom-card {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 30px;
+    border-radius: 20px;
+    border: 2px solid #2ecc71;
+    text-align: center;
+    backdrop-filter: blur(10px);
+}
+
+/* Контейнер для предпросмотра */
+/* 1. Увеличиваем высоту рамки, чтобы человечек влез целиком */
+/* 1. Настройка контейнера */
+.preview-box {
+    width: 160px;
+    height: 250px;
+    position: relative;
+    margin: 20px auto;
+    background: #34495e;
+    border: 3px solid #2ecc71;
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    justify-content: center; /* Центрируем части тела внутри */
+}
+
+/* Базовый стиль для слоёв */
+.player-part {
+    position: absolute;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    width: 90%; 
+    image-rendering: pixelated;
+    left: 5%; 
+}
+
+.colored-part {
+    background-blend-mode: multiply;
+}
+
+.preview-box .p-head   { height: 94px; top: 10px;  z-index: 4; } 
+.preview-box .p-shirt  { height: 80px; top: 85px;  z-index: 3; }
+.preview-box .p-shorts { height: 40px; top: 146px; z-index: 2; }
+.preview-box .p-socks  { height: 55px; top: 180px; z-index: 1; }
+
+
+/* Эффект покраски ткани (белый цвет станет выбранным) */
+.colored-part {
+    mix-blend-mode: multiply; /* Магия: красит белое, не трогает черное */
+}
+      .screen {
+        display: none;
+      }
+      .active {
+        display: block;
+      }
+
+
+#match-ui {
+  width: 1200px;
+  margin: 0 auto 20px auto;
+}
+
+.top-stats-bar {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.top-stat-box {
+  flex: 1;
+  min-width: 0;
+  background: rgba(0, 0, 0, 0.8);
+  border: 2px solid #2ecc71;
+  border-radius: 14px;
+  padding: 14px 18px;
+  text-align: center;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+}
+
+.top-stat-line {
+  font-size: 14px;
+  color: #aaa;
+  margin: 4px 0;
+  white-space: nowrap;
+  text-transform: uppercase;
+}
+
+.top-stat-line b {
+  color: #2ecc71;
+  font-size: 20px;
+  text-shadow: 0 0 5px rgba(46, 204, 113, 0.3);
+}     
+
+#game-screen {
+  position: relative;
+  width: 1200px;
+  height: 700px;
+  background-image: url('match/pole.png');
+  background-size: 100% 100%;
+  background-position: center;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+  overflow: hidden;
+
+  margin: 10px auto 0 auto;
+}
+/* Контейнер всего футболиста */
+/* 1. ГЛАВНЫЙ КОНТЕЙНЕР ИГРОКА НА ПОЛЕ */
+.player-container {
+    position: absolute;
+
+    /* ВАЖНО: вместо фиксированных пикселей используем % */
+    left: 50%;
+    top: 70%;
+
+    transform: translate(-50%, -50%) scale(0.8);
+    transform-origin: bottom center;
+
+    width: 160px;   
+    height: 250px;  
+
+    z-index: 10;
+    pointer-events: none;
+}
+
+/* 2. ПРАВИЛЬНАЯ СБОРКА ТЕЛА (чтобы не было зазоров) */
+.player-container .player-part {
+    position: absolute; /* Накладываем слои друг на друга */
+    width: 90%;
+    left: 5%;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    image-rendering: pixelated;
+}
+
+/* 3. КООРДИНАТЫ ЧАСТЕЙ (те самые 2px нахлеста, чтобы не развалился) */
+/* 3. КООРДИНАТЫ ЧАСТЕЙ (с анимацией внутри) */
+
+.player-container .p-head { 
+    height: 94px; 
+    top: 10px; 
+    z-index: 4; 
+    animation: headBob 2.5s infinite ease-in-out; 
+} 
+
+.player-container .p-shirt { 
+    height: 80px; 
+    top: 85px; 
+    z-index: 3; 
+    animation: bodyBreathe 3s infinite ease-in-out; 
+    transform-origin: bottom center; 
+}
+
+.player-container .p-shorts { 
+    height: 40px; 
+    top: 146px; 
+    z-index: 2; 
+} 
+
+.player-container .p-socks  { 
+    height: 55px; 
+    top: 180px; 
+    z-index: 1; 
+}
+
+/* Твои сетки цветов и админка (оставляем как есть) */
+.color-grid { display: flex; gap: 10px; justify-content: center; margin: 10px 0; }
+.color-opt { width: 30px; height: 30px; border-radius: 5px; border: 2px solid #fff; cursor: pointer; }
+/* Контейнер сетки */
+
+.color-opt {
+    width: 30px;
+    height: 30px;
+    border-radius: 5px;
+    border: 2px solid #fff;
+    cursor: pointer;
+    transition: transform 0.1s;
+}
+
+.color-opt:hover {
+    transform: scale(1.1);
+}
+/* Кнопка цвета */
+.color-btn {
+    width: 50px;
+    height: 50px;
+    border: none;
+    cursor: pointer;
+    border-radius: 4px;                    /* Легкое скругление самих квадратов */
+    transition: transform 0.1s;
+}
+
+.color-btn:hover {
+    transform: scale(1.1);                 /* Увеличиваем при наведении */
+    z-index: 10;
+}
+
+/* Активный (выбранный) цвет */
+.color-btn.active {
+    outline: 3px solid white;
+    outline-offset: -4px;
+}
+      
+      .admin-panel {
+        /* display: none !important; */
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        background: rgba(255, 255, 255, 0.1);
+        padding: 10px;
+        border-radius: 10px;
+        border: 1px dashed #666;
+        z-index: 100;
+      }
+      .admin-btn {
+        background: #444;
+        color: #fff;
+        border: 1px solid #666;
+        padding: 8px 12px;
+        cursor: pointer;
+        font-size: 0.7rem;
+        border-radius: 5px;
+      }
+      .currency-bar {
+        display: flex;
+        justify-content: center;
+        gap: 30px;
+        margin-bottom: 10px;
+        padding: 10px;
+        background: rgba(0, 0, 0, 0.6);
+        border-radius: 30px;
+        border: 1px solid #2ecc71;
+      }
+      .price-xp {
+        color: #5dade2 !important; /* Ярко-голубой */
+      }
+
+      .price-coin {
+        color: #f4d03f !important; /* Ярко-желтый */
+      }
+      .xp-val {
+        color: #3498db;
+        font-weight: bold;
+        font-size: 1.3rem;
+      }
+      .coin-val {
+        color: #f1c40f;
+        font-weight: bold;
+        font-size: 1.3rem;
+      }
+      .tree-viewport {
+        position: relative;
+        height: 750px;
+        width: 1050px;
+        margin: 10px auto;
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 20px;
+        border: 2px solid #2ecc71;
+        overflow-y: auto;
+      }
+      .floating-xp {
+        position: absolute;
+        pointer-events: none;
+        font-weight: bold;
+        font-size: 1.5rem;
+        color: #3498db;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        animation: floatUp 0.8s ease-out forwards;
+        z-index: 100;
+      }
+      .floating-coin {
+        position: absolute;
+        pointer-events: none;
+        font-weight: bold;
+        font-size: 1.6rem;
+        color: #f1c40f;
+        text-shadow: 0 0 10px rgba(241, 196, 15, 0.5);
+        animation: floatUpCoin 1s ease-out forwards;
+        z-index: 101;
+      }
+      @keyframes floatUp {
+        0% {
+          transform: translateY(0);
+          opacity: 1;
+        }
+        100% {
+          transform: translateY(-100px);
+          opacity: 0;
+        }
+      }
+      @keyframes floatUpCoin {
+        0% {
+          transform: translateY(0) scale(0.5);
+          opacity: 0;
+        }
+        20% {
+          opacity: 1;
+          transform: translateY(-20px) scale(1.2);
+        }
+        100% {
+          transform: translateY(-120px) rotate(15deg);
+          opacity: 0;
+        }
+        
+
+
+      }
+      .skill-node {
+        position: absolute;
+        width: 90px;
+        height: 90px;
+        background: #27ae60;
+        border: 2px solid #0d1f0d;
+        border-radius: 14px;
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: 0.3s;
+        z-index: 5;
+        line-height: 1.1;
+      }
+
+      .skill-node.visible {
+        display: flex;
+      }
+
+      .skill-node.disabled {
+        background: #333 !important;
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      /* СОСТОЯНИЕ МАКСИМАЛЬНОГО УРОВНЯ (ВЫНЕСЕНО ИЗ DISABLED) */
+      .skill-node.maxed {
+        background-color: #f1c40f !important;
+        background-image: linear-gradient(
+          135deg,
+          #f1c40f 0%,
+          #f39c12 100%
+        ) !important;
+        border: 3px solid #ffffff !important;
+        box-shadow: 0 0 20px rgba(241, 196, 15, 0.7) !important;
+        opacity: 1 !important; /* Чтобы не было полупрозрачным */
+      }
+
+      /* ТЕКСТ ДЛЯ ОБЫЧНЫХ УЗЛОВ (С ОБВОДКОЙ) */
+      .skill-node small,
+      .skill-node span,
+      .skill-node .price-xp,
+      .skill-node .price-coin {
+        text-shadow:
+          -1px -1px 0 #000,
+          1px -1px 0 #000,
+          -1px 1px 0 #000,
+          1px 1px 0 #000,
+          2px 2px 2px rgba(0, 0, 0, 0.5);
+        font-weight: bold;
+        color: white; /* Базовый цвет текста */
+      }
+
+      /* ТЕКСТ ДЛЯ ЗОЛОТЫХ УЗЛОВ (ЧЕРНЫЙ БЕЗ ОБВОДКИ) */
+      .skill-node.maxed small,
+      .skill-node.maxed span,
+      .skill-node.maxed .price-xp,
+      .skill-node.maxed .price-coin,
+      .skill-node.maxed b {
+        color: #000000 !important;
+        text-shadow: none !important;
+        font-weight: 900;
+      }
+
+      
+      /* Этот стиль будет работать только для того, что лежит внутри тега с классом xp-icon */
+      .xp-icon {
+        color: #3498db; /* Насыщенный синий */
+        text-shadow:
+          1px 1px 0px #fff,
+          -1px -1px 0px #fff,
+          1px -1px 0px #fff,
+          -1px 1px 0px #fff; /* Белая резкая обводка */
+        font-style: normal;
+        margin-left: 3px;
+      }
+      .timer-container {
+        position: relative;
+        display: inline-block;
+      }
+      #timer-text {
+        /* 1. Твой пиксельный шрифт (замени 'Press Start 2P' на свой, если другой) */
+        font-family: "Press Start 2P", cursive;
+
+        /* 2. Размер (чуть больше, чтобы читалось) */
+        font-size: 28px;
+
+        /* 3. Цвет (ярко-белый или желтый) */
+        color: #f7e708;
+
+        /* 4. "Жирность" через пиксельную обводку (Shadow) */
+        /* Рисуем жесткие тени во все стороны на 2 пикселя */
+        text-shadow:
+          -2px -2px 0 #000,
+          2px -2px 0 #000,
+          -2px 2px 0 #000,
+          2px 2px 0 #000,
+          4px 4px 0 rgba(0, 0, 0, 0.5); /* Глубокая тень для объема */
+
+        /* 5. Убираем сглаживание, чтобы пиксели были острыми */
+        image-rendering: pixelated;
+        font-smooth: never;
+        -webkit-font-smoothing: none;
+      }
+      #time-bonus {
+        position: absolute;
+        right: -50px;
+        top: 0;
+        color: #2ecc71;
+        font-weight: bold;
+        opacity: 0;
+        transition: 0.3s;
+      }
+      .show-bonus {
+        opacity: 1 !important;
+        transform: translateY(-10px);
+      }
+      
+     @keyframes ballIdle {
+  0%, 100% {
+    margin-top: 20px; /* Качаемся за счет отступов, а не трансформации */
+  }
+  50% {
+    margin-top: 15px;
+  }
+      }
+      #progress {
+        height: 12px;
+        background: #e74c3c;
+        width: 100%;
+        border-radius: 6px;
+      }
+      #score-container {
+        font-size: 5rem;
+        font-weight: bold;
+        color: #3498db;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: -10px;
+        margin: 0;
+      }
+      #score-container span {
+        font-size: 4rem;
+        color: white;
+      }
+      /* --- СТИЛИ ИТОГОВОГО ОКНА --- */
+#summary-overlay {
+  display: none;
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0, 0, 0, 0.9);
+  z-index: 10000;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(5px);
+}
+
+@keyframes headBob {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-3px) rotate(2deg); } /* Голова идет вверх и чуть наклоняется */
+}
+
+/* --- Ключевые кадры для тела (майка/шорты) --- */
+@keyframes bodyBreathe {
+  0%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(1.03); } /* Тело просто слегка расширяется */
+}
+.summary-card {
+  background: #1e1e1e;
+  border: 4px solid #2ecc71;
+  border-radius: 20px;
+  padding: 35px;
+  width: 480px; 
+  color: white;
+  text-align: center;
+  box-shadow: 0 0 30px rgba(46, 204, 113, 0.3);
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 12px 0; /* Отступ между строками */
+  font-size: 1.2rem; 
+  color: white; /* Делаем весь текст белым */
+}
+.summary-sub {
+  font-size: 0.9rem;
+  color: #aaa;
+  margin-top: -10px;
+  margin-bottom: 12px;
+  display: flex;
+  justify-content: space-between;
+}
+
+/* Заголовки разделов с линиями */
+.res-title-xp { 
+  color: #3498db; 
+  margin-top: 25px; 
+  text-align: left; 
+  font-size: 1.1rem; 
+  text-transform: uppercase;
+  border-bottom: 2px solid #3498db; 
+  padding-bottom: 5px;
+}
+
+.res-title-coin { 
+  color: #f1c40f; 
+  margin-top: 25px; 
+  text-align: left; 
+  font-size: 1.1rem; 
+  text-transform: uppercase;
+  border-bottom: 2px solid #f1c40f; 
+  padding-bottom: 5px;
+}
+
+/* Итоговые строки внутри разделов */
+.res-total-row {
+  margin-top: 15px;
+  padding-top: 10px;
+  border-top: 2px solid rgba(255, 255, 255, 0.2);
+  font-size: 1.4rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Кнопка "В МЕНЮ" */
+#summary-overlay .menu-btn {
+  width: 100%;
+  margin-top: 35px;
+  padding: 18px;
+  background: #2ecc71;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  font-family: inherit; /* Использует основной шрифт игры */
+  font-size: 1.2rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  text-shadow: 1px 1px 0 #000;
+  transition: all 0.2s ease;
+  box-shadow: 0 5px 0 #27ae60;
+}
+
+#summary-overlay .menu-btn:hover {
+  background: #2ae17a;
+  transform: translateY(-2px);
+  box-shadow: 0 7px 0 #27ae60;
+}
+
+#summary-overlay .menu-btn:active {
+  transform: translateY(3px);
+  box-shadow: 0 2px 0 #27ae60;
+}
+/* Анимация зрителя */
+#viewers-container {
+    position: absolute;
+    top: 180px;
+    left: 5%;
+    width: 90%;
+    height: 28%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.viewer-sprite {
+    position: absolute;
+    background-repeat: no-repeat;
+    image-rendering: pixelated;
+}
+/* Контейнер для анимации Друга */
+#friend-animation {
+    position: absolute;
+    left: 70%;
+    top: 79%;
+    transform: translate(-50%, -50%);
+}
+
+.viewer-sprite {
+    width: 30px;  /* Укажи ширину ОДНОГО кадра из твоего атласа */
+    height: 35px; /* Укажи высоту ОДНОГО кадра */
+    background-repeat: no-repeat;
+    image-rendering: pixelated; /* Сохраняет четкость пикселей */
+}
+
+
+
+.stopwatch-container {
+        width: 140px; /* Установи желаемый размер секундомера на экране */
+        margin: 15px auto;
+        position: relative; /* Чтобы стрелка позиционировалась относительно контейнера */
+
+        /* Черная пиксельная тень для объема */
+        filter: drop-shadow(0 0 10px rgba(0, 0, 0, 0.6));
+      }
+
+      .stopwatch-case {
+        width: 100%;
+        height: 100%;
+        display: block;
+
+        /* ВКЛЮЧАЕМ ПИКСЕЛЬНЫЙ РЕНДЕРИНГ */
+        image-rendering: pixelated;
+        image-rendering: crisp-edges; /* Для Safari */
+      }
+
+      .stopwatch-arrow-svg {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none; /* Чтобы клики проходили сквозь SVG */
+      }
+
+      #stopwatch-hand {
+        /* Точка вращения теперь — центр контейнера (50px 50px в SVG-координатах) */
+        transform-origin: 50px 60px;
+}
+
+#ball-container {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 999;
+  text-align: center;
+}
+
+#ball {
+  width: 120px;
+  height: auto;
+  cursor: pointer;
+  image-rendering: pixelated;
+  transition: transform 0.1s ease-out; /* Плавный поворот */
+  display: block;
+  margin: 15px auto;
+  
+  /* ВОТ ЭТА СТРОЧКА ВАЖНА: она связывает JS и CSS */
+  transform: rotate(var(--angle, 0deg)); 
+  
+  /* Оставляем твою анимацию покачивания */
+  animation: ballIdle 4s ease-in-out infinite;
+  z-index: 999;
+  position: relative;
+}
+
+#ball:active {
+  /* При нажатии мяч чуть сжимается, сохраняя угол поворота */
+  transform: rotate(var(--angle, 0deg)) scale(0.9);
+}
+
+.extra-ball {
+  width: 120px;
+  height: auto;
+  cursor: pointer;
+  image-rendering: pixelated;
+  transition: transform 0.1s ease-out;
+  display: block;
+  margin: 15px auto;
+  transform: translate(-50%, -50%) rotate(var(--angle, 0deg));
+  animation: ballIdle 4s ease-in-out infinite;
+  z-index: 999;
+  position: absolute;
+}
+
+.extra-ball:active {
+  transform: translate(-50%, -50%) rotate(var(--angle, 0deg)) scale(0.9);
+}
+
+/* На всякий случай: делаем другие контейнеры "сквозными", 
+   если они вдруг налезают на мяч */
+.stopwatch-container, .timer-container {
+  pointer-events: none; 
+}
+/* Но внутри них кнопки (если есть) должны работать */
+.stopwatch-container *, .timer-container * {
+  pointer-events: auto;
+/* === ЦЕНТР === */
+}
+#node-click {
+  left: 480px;
+  top: 300px;
+  border: 3px solid #fff;
+}
+
+/* === ЛЕВАЯ ВЕТКА (БЕЗ ИЗМЕНЕНИЙ) === */
+#node-friend { left: 360px; top: 300px; }
+#node-fCrit { left: 360px; top: 420px; }
+#node-fCoin { left: 360px; top: 540px; }
+
+#node-viewer { left: 240px; top: 300px; }
+#node-v-stand { left: 240px; top: 420px; }
+#node-fan { left: 240px; top: 180px; }
+#node-attr { left: 240px; top: 60px; }
+#node-drink { left: 120px; top: 180px; }
+#node-v-luck { left: 120px; top: 300px; }
+#node-f-sec { left: 360px; top: 180px; }
+
+/* === ПРАВАЯ ВЕТКА (ОБНОВЛЕННАЯ) === */
+
+/* Реакция (новый центр вправо) */
+#node-reaction {
+  left: 600px;
+  top: 300px;
+}
+
+/* Экипировка */
+#node-equip {
+  left: 720px;
+  top: 300px;
+}
+
+/* Футболист */
+#node-footy {
+  left: 720px;
+  top: 180px;
+}
+
+/* Тренер */
+#node-coach {
+  left: 840px;
+  top: 180px;
+}
+
+/* Награда */
+#node-reward {
+  left: 720px;
+  top: 60px;
+}
+
+/* Команда */
+#node-team {
+  left: 720px;
+  top: -60px;
+  background: linear-gradient(135deg, #1a1a1a 0%, #2c3e50 100%);
+  border: 2px solid #f1c40f;
+  box-shadow: 0 0 15px rgba(241, 196, 15, 0.3);
+}
+
+/* Большой куш */
+#node-bigReward {
+  left: 840px;
+  top: 60px;
+}
+
+/* === ВЕРХ ОТ РЕАКЦИИ === */
+
+#node-delay {
+  left: 600px;
+  top: 180px;
+}
+
+#node-time {
+  left: 600px;
+  top: 60px;
+}
+
+#node-timeCoin {
+  left: 480px;
+  top: 180px;
+}
+
+/* === НИЖНЯЯ ВЕТКА === */
+
+#node-crit {
+  left: 480px;
+  top: 420px;
+}
+
+#node-cCoin {
+  left: 480px;
+  top: 540px;
+}
+
+#node-midas {
+  left: 480px;
+  top: 660px;
+}
+
+#node-mCrit {
+  left: 360px;
+  top: 660px;
+}
+
+#node-midasSpeed {
+  left: 600px;
+  top: 660px;
+}
+
+#node-moreCoins {
+  left: 720px;
+  top: 420px;
+}
+
+/* === НОВАЯ ВЕТКА МЯЧЕЙ === */
+
+#node-multiBall {
+  left: 600px;
+  top: 420px;
+}
+
+#node-goldBall {
+  left: 600px;
+  top: 540px;
+}
+
+#node-fireBall {
+  left: 720px;
+  top: 420px;
+}
+
+#node-synergy {
+  left: 720px;
+  top: 540px;
+}
+
+      /* Эффект при покупке */
+      #node-team.bought {
+        background: linear-gradient(
+          135deg,
+          #27ae60 0%,
+          #2ecc71 100%
+        ); /* Зеленый при достижении цели */
+        border-color: #fff;
+      }
+    
+      
+    </style>
+  </head>
+  <body>
+    <div id="custom-screen" class="screen active">
+    <div class="custom-card">
+        <h2>СОЗДАНИЕ ИГРОКА</h2>
+        
+        <div class="preview-box" id="player-preview"></div>
+
+        <div class="custom-controls">
+            <div class="control-row">
+                <button class="menu-btn" onclick="changeHead(-1)">⬅️</button>
+                <span style="font-weight: bold;">ЛИЦО</span>
+                <button class="menu-btn" onclick="changeHead(1)">➡️</button>
+            </div>
+
+            <hr style="border: 0.5px solid rgba(255,255,255,0.1); margin: 15px 0;">
+
+            <div class="color-selection-title">ЦВЕТ МАЙКИ</div>
+            <div class="color-grid">
+                <div class="color-opt" style="background:#fff" onclick="updatePartColor('shirtColor', 'white')"></div>
+                <div class="color-opt" style="background:#f00" onclick="updatePartColor('shirtColor', 'red')"></div>
+                <div class="color-opt" style="background:#00f" onclick="updatePartColor('shirtColor', 'blue')"></div>
+                <div class="color-opt" style="background:#000" onclick="updatePartColor('shirtColor', 'black')"></div>
+            </div>
+
+            <div class="color-selection-title">ЦВЕТ ШОРТ</div>
+            <div class="color-grid">
+                <div class="color-opt" style="background:#fff" onclick="updatePartColor('shortsColor', 'white')"></div>
+                <div class="color-opt" style="background:#f00" onclick="updatePartColor('shortsColor', 'red')"></div>
+                <div class="color-opt" style="background:#00f" onclick="updatePartColor('shortsColor', 'blue')"></div>
+                <div class="color-opt" style="background:#000" onclick="updatePartColor('shortsColor', 'black')"></div>
+            </div>
+
+            <div class="color-selection-title">ЦВЕТ ГЕТР</div>
+            <div class="color-grid">
+                <div class="color-opt" style="background:#fff" onclick="updatePartColor('socksColor', 'white')"></div>
+                <div class="color-opt" style="background:#f00" onclick="updatePartColor('socksColor', 'red')"></div>
+                <div class="color-opt" style="background:#00f" onclick="updatePartColor('socksColor', 'blue')"></div>
+                <div class="color-opt" style="background:#000" onclick="updatePartColor('socksColor', 'black')"></div>
+            </div>
+
+            <button class="start-game-btn" onclick="savePlayerAndStart()" style="margin-top: 20px; width: 100%;">
+                СОХРАНИТЬ И ИГРАТЬ
+            </button>
+        </div> </div> 
+    </div> 
+
+    <div class="admin-panel" id="admin-ui" style="display:none;"> 
+        <button class="admin-btn" onclick="addRes('xp', 10000)">+10000 XP</button>
+        <button class="admin-btn" onclick="addRes('coins', 1000)">
+        +1000 Coins
+      </button>
+
+    </div>
+    <div id="summary-overlay">
+  <div class="summary-card">
+    <h2 style="color:#2ecc71; margin-top:0;">МАТЧ ЗАВЕРШЕН</h2>
+    
+    <div class="summary-row" style="border:none; justify-content:center; font-size: 1rem;">
+      <span>⏱ Время: <b id="res-time">0s</b></span>
+    </div>
+
+    <div class="res-title-xp">🔹 Опыт (XP)</div>
+    <div class="summary-row">
+      <span>👆 Клики</span>
+      <span id="res-xp-click">0</span>
+    </div>
+    <div class="summary-row">
+      <span>🤖 Авто-удары</span>
+      <span id="res-xp-friend">0</span>
+    </div>
+    <div class="summary-row res-total-row" style="color: #3498db; border-top-color: #3498db;">
+      <b>ВСЕГО XP:</b>
+      <b id="res-xp-total">0</b>
+    </div>
+
+    <div class="res-title-coin" id="res-section-coin" style="display:none;">🟡 Доход (МОНЕТЫ)</div>
+
+<div class="summary-row" id="row-res-base" style="display:none;">
+  <span>🎟️ Билеты</span>
+  <span id="res-coin-base">0</span>
+</div>
+
+<div class="summary-row" id="row-res-luck" style="display:none;">
+  <span>🍀 Удача</span>
+  <span id="res-coin-luck">0</span>
+</div>
+
+<div class="summary-row" id="row-res-drink" style="display:none;">
+  <span>🥤 Напитки</span>
+  <span id="res-coin-drink">0</span>
+</div>
+
+<div class="summary-row" id="row-res-attr" style="display:none;">
+  <span>🧣 Атрибутика</span>
+  <span id="res-coin-attr">0</span>
+</div>
+
+<div class="summary-row res-total-row" id="row-res-total-coin" style="display:none; color: #f1c40f; border-top-color: #f1c40f;">
+  <b>ВСЕГО МОНЕТ:</b>
+  <b id="res-coin-total" style="font-size: 1.8rem;">0</b>
+</div>
+
+    <button onclick="closeSummary()" class="menu-btn">В МЕНЮ</button>
+  </div>
+</div>
+
+<div class="container">
+  <div id="menu-screen" class="screen active">
+    <div class="currency-bar">
+      <div class="xp-val">🔹 XP: <span id="total-xp">0</span></div>
+      <div class="coin-val">🟡 COINS: <span id="total-coins">0</span></div>
+    </div>
+    <div class="tree-viewport" id="tree"></div>
+    <button
+      style="
+        background: #2ecc71;
+        color: white;
+        border: none;
+        padding: 15px 60px;
+        font-weight: bold;
+        border-radius: 50px;
+        cursor: pointer;
+      "
+      onclick="startGame()"
+    >
+      НАЧАТЬ МАТЧ
+    </button>
+  </div>
+  <div id="top-stats-ui" class="screen">
+  <div class="top-stats-bar">
+    <div class="top-stat-box">
+      <div class="top-stat-line">СИЛА УДАРА: <b id="top-stat-damage">1</b></div>
+      <div class="top-stat-line">ПАРТНЕРЫ: <b id="top-stat-team">0</b></div>
+    </div>
+
+    <div class="top-stat-box">
+      <div class="top-stat-line">ШАНС КРИТА: <b id="top-stat-crit">0%</b></div>
+      <div class="top-stat-line">ШАНС ЗАТЯЖКИ: <b id="top-stat-delay">0%</b></div>
+    </div>
+
+    <div class="top-stat-box">
+      <div class="top-stat-line">БАЗОВЫЙ ДОХОД:</div>
+      <div class="top-stat-line"><b id="top-stat-income">0</b> 🟡 / МАТЧ</div>
+    </div>
+  </div>
+</div>
+  <div id="game-screen" class="screen"> 
+    <div id="viewers-container"></div>
+    <div class="stopwatch-container"> <img src="match/stopwatch.png" alt="Stopwatch Case" class="stopwatch-case" />
+       <svg viewBox="0 0 100 100" class="stopwatch-arrow-svg">
+         <circle cx="50" cy="60" r="3" fill="#000000" /> 
+         <line id="stopwatch-hand" x1="50" y1="60" x2="50" y2="30" stroke="#000000" stroke-width="3" stroke-linecap="round" /> </svg> </div> 
+         <div class="timer-container"> <div id="timer-text">00:11:00</div>
+          <div id="time-bonus">+1s</div> </div> 
+          <div id="score-container" style="position: relative; z-index: 10"> 🔹 <span id="current-score">0</span> </div> 
+          <div id="ball-container">
+            <img src="match/ball.png" id="ball" alt="Soccer Ball" draggable="false" onclick="handleKick(event)" /> </div>
+             <div id="game-coins" style=" color: #f1c40f; font-weight: bold; font-size: 1.5rem; margin-top: 10px; position: relative; z-index: 10; text-align: center; " > 🟡 0 </div>
+              <div id="friend-animation"></div> </div>
+
+    <script>
+      let friendAtlasData = null; 
+let friendAnimationInterval = null;
+let currentFriendFrame = 0;
+let viewerAtlasData = null;
+let viewerFrames = [];
+const ballPositions = [
+    { left: "18%", top: "28%" }, { left: "32%", top: "28%" }, { left: "46%", top: "28%" }, { left: "60%", top: "28%" }, { left: "74%", top: "28%" },
+    { left: "18%", top: "38%" }, { left: "32%", top: "38%" }, { left: "46%", top: "38%" }, { left: "60%", top: "38%" }, { left: "74%", top: "38%" },
+    { left: "18%", top: "48%" }, { left: "32%", top: "48%" }, { left: "46%", top: "48%" }, { left: "60%", top: "48%" }, { left: "74%", top: "48%" },
+    { left: "18%", top: "58%" }, { left: "32%", top: "58%" }, { left: "46%", top: "58%" }, { left: "60%", top: "58%" }, { left: "74%", top: "58%" },
+    { left: "18%", top: "68%" }, { left: "32%", top: "68%" }, { left: "46%", top: "68%" }, { left: "60%", top: "68%" }, { left: "74%", top: "68%" }
+];
+
+// Функция загрузки JSON (Атласа)
+async function loadFriendAtlas() {
+    try {
+        const response = await fetch('match/friend.json');
+        const text = await response.text(); 
+        friendAtlasData = JSON.parse(text);
+        console.log("Данные друга загружены");
+    } catch (e) { console.log("Ошибка загрузки JSON:", e); }
+}
+async function loadViewerAtlas() {
+    try {
+        const response = await fetch('match/viewer.json');
+        const text = await response.text();
+        viewerAtlasData = JSON.parse(text);
+        viewerFrames = Object.values(viewerAtlasData.frames);
+        console.log("Данные зрителя загружены");
+    } catch (e) {
+        console.log("Ошибка загрузки viewer.json:", e);
+    }
+}
+function moveBallToRandomPosition(usedIndexes = []) {
+    const ballContainer = document.getElementById("ball-container");
+    if (!ballContainer) return;
+
+    const newIndex = getRandomFreeBallIndex(usedIndexes, [currentMainBallIndex]);
+    if (newIndex === -1) return;
+
+    const pos = ballPositions[newIndex];
+    ballContainer.style.left = pos.left;
+    ballContainer.style.top = pos.top;
+    ballContainer.style.transform = "translate(-50%, -50%)";
+
+    currentMainBallIndex = newIndex;
+    usedIndexes.push(newIndex);
+}
+function getRandomFreeBallIndex(usedIndexes = [], forbiddenIndexes = []) {
+    const freeIndexes = ballPositions
+        .map((_, index) => index)
+        .filter(index => !usedIndexes.includes(index) && !forbiddenIndexes.includes(index));
+
+    if (freeIndexes.length === 0) return -1;
+
+    return freeIndexes[Math.floor(Math.random() * freeIndexes.length)];
+}
+
+function createExtraBall() {
+    const field = document.getElementById("game-screen");
+    if (!field) return null;
+
+    const ball = document.createElement("img");
+ball.src = "match/ball.png";
+ball.className = "extra-ball";
+ball.style.setProperty("--angle", "0deg");
+ball.draggable = false;
+ball.onclick = handleKick;
+
+    ball.style.position = "absolute";
+    ball.style.width = "120px";
+    ball.style.height = "auto";
+    ball.style.cursor = "pointer";
+    ball.style.imageRendering = "pixelated";
+    ball.style.zIndex = "999";
+
+    field.appendChild(ball);
+    return ball;
+}
+function updateMultiBalls() {
+    const maxExtraBalls = data.lvls.multiBall || 0;
+
+    // создаём нужное максимальное количество один раз
+    while (extraBalls.length < maxExtraBalls) {
+        const newBall = createExtraBall();
+        if (newBall) extraBalls.push(newBall);
+    }
+
+    while (extraBalls.length > maxExtraBalls) {
+        const ball = extraBalls.pop();
+        if (ball) ball.remove();
+    }
+
+    moveAllBallsToRandomPositions();
+}
+function moveAllBallsToRandomPositions() {
+    const usedIndexes = [];
+
+    // Основной мяч: не в ту же клетку, где был
+    moveBallToRandomPosition(usedIndexes);
+
+    // Сброс позиций доп. мячей
+    currentExtraBallIndexes = [];
+
+    // Доп. мячи: не накладываются друг на друга и не лезут в основной
+    extraBalls.forEach((ball) => {
+        const shouldShow = Math.random() < 0.05;
+
+        if (!shouldShow) {
+            ball.style.display = "none";
+            currentExtraBallIndexes.push(-1);
+            return;
+        }
+
+        const newIndex = getRandomFreeBallIndex(usedIndexes);
+        if (newIndex === -1) {
+            ball.style.display = "none";
+            currentExtraBallIndexes.push(-1);
+            return;
+        }
+
+        const pos = ballPositions[newIndex];
+        ball.style.display = "block";
+        ball.style.left = pos.left;
+        ball.style.top = pos.top;
+        ball.style.setProperty("--angle", "0deg");
+
+        usedIndexes.push(newIndex);
+        currentExtraBallIndexes.push(newIndex);
+    });
+}
+
+
+// Функция смены кадров
+function playFriendFrame() {
+    if (!friendAtlasData) return;
+    const friend = document.getElementById('friend-animation');
+
+    const div = document.getElementById('friend-animation');
+    const frames = Object.keys(friendAtlasData.frames);
+    
+
+    if (currentFriendFrame >= frames.length) currentFriendFrame = 0;
+    
+    const data = friendAtlasData.frames[frames[currentFriendFrame]].frame;
+
+   const scale = 0.4;
+
+div.style.backgroundImage = "url('match/friend.png')";
+
+// 🔥 масштабируем позицию
+div.style.backgroundPosition = `-${data.x * scale}px -${data.y * scale}px`;
+
+// 🔥 масштабируем весь atlas
+div.style.backgroundSize = `${friendAtlasData.meta.size.w * scale}px ${friendAtlasData.meta.size.h * scale}px`;
+
+// 🔥 размер кадра
+div.style.width = `${data.w * scale}px`;
+div.style.height = `${data.h * scale}px`;
+
+// 🔥 зеркалим
+div.style.transform = "translate(-50%, -50%) scaleX(-1)";
+
+    currentFriendFrame++;
+}
+function updateViewersDisplay() {
+    const container = document.getElementById('viewers-container');
+    if (!container) return;
+
+    let count = data.lvls.viewer || 0;
+    const currentSprites = container.querySelectorAll('.viewer-sprite').length;
+
+    const viewerPositions = [
+    { left: "5%",  top: "55%" },
+    { left: "9%",  top: "55%" },
+    { left: "-5%", top: "65%" },
+    { left: "1%",  top: "55%" },
+    { left: "-1%", top: "65%" }
+];
+
+    if (count > currentSprites) {
+        for (let i = currentSprites; i < count; i++) {
+            const vDiv = document.createElement('div');
+            vDiv.className = 'viewer-sprite';
+            vDiv.style.backgroundImage = "url('match/viewer.png')";
+
+            const pos = viewerPositions[i] || { left: "8%", top: "18%" };
+            vDiv.style.left = pos.left;
+            vDiv.style.top = pos.top;
+
+            const randomOffset = Math.floor(Math.random() * (viewerFrames.length || 1));
+
+            container.appendChild(vDiv);
+            animateSingleViewer(vDiv, randomOffset);
+}
+    }
+}
+function animateSingleViewer(el, frameIndex) {
+    setInterval(() => {
+        if (viewerFrames.length === 0 || !viewerAtlasData) return;
+        
+        frameIndex = (frameIndex + 1) % viewerFrames.length;
+        const frame = viewerFrames[frameIndex].frame;
+
+        const scale = 0.2; 
+
+        // ВОТ ЭТА СТРОКА ГЛАВНАЯ — она переключает кадр
+        el.style.backgroundPosition = `-${frame.x * scale}px -${frame.y * scale}px`;
+
+        el.style.width = `${frame.w * scale}px`;
+        el.style.height = `${frame.h * scale}px`;
+
+        el.style.backgroundSize = `${viewerAtlasData.meta.size.w * scale}px ${viewerAtlasData.meta.size.h * scale}px`;
+        el.style.backgroundRepeat = "no-repeat";
+    }, 800 + Math.random() * 200); // скорость анимации
+}
+
+// Функция запуска (вызывай её при покупке навыка)
+function startFriend() {
+    console.log("Пытаюсь запустить Друга...");
+    
+    const div = document.getElementById('friend-animation');
+    
+    // 1. Проверяем, есть ли вообще такой DIV на странице
+    if (!div) {
+        console.error("Ошибка: DIV #friend-animation не найден в HTML!");
+        return;
+    }
+
+    // 2. Проверяем, загрузился ли JSON
+    if (!friendAtlasData) {
+        console.warn("Данные атласа еще не загружены. Пробую загрузить еще раз...");
+        loadFriendAtlas(); // Пытаемся загрузить снова
+        return;
+    }
+
+    // 3. Если всё ок — показываем и запускаем
+    div.style.display = 'block';
+    
+    if (!friendAnimationInterval) {
+        friendAnimationInterval = setInterval(playFriendFrame, 100);
+        console.log("Анимация запущена успешно!");
+    }
+}
+
+// Сразу запускаем загрузку данных
+loadFriendAtlas();
+loadViewerAtlas();
+
+
+      // ... (функция spawnFloatingText и объект data остаются как у тебя) ...
+      function spawnFloatingText(text, x, y, type = "xp") {
+        const el = document.createElement("div");
+        if (type === "coin") {
+          el.className = "floating-coin";
+          el.innerHTML = text + " 🟡";
+        } else {
+          el.className = "floating-xp";
+          el.innerHTML = text + " 🔹";
+          if (type === "crit") {
+            el.style.color = "#e74c3c";
+            el.style.fontSize = "2rem";
+            el.style.scale = "1.2";
+          }
+        }
+        el.style.left = x - 20 + "px";
+        el.style.top = y - 20 + "px";
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 1000);
+      }
+
+      let data = {
+        xp: 0,
+        coins: 0,
+        lvls: {
+          click: 1,
+          friend: 0,
+          footy: 0,
+          fCrit: 0,
+          fCoin: 0,
+          crit: 0,
+          cCoin: 0,
+          delay: 0,
+          time: 0,
+          viewer: 0,
+          vLuck: 0,
+          vStand: 0,
+          fSec: 0,
+          fan: 0,
+          attr: 0,
+          drink: 0,
+          midas: 0,
+          mCrit: 0,
+          reward: 0,
+          bigReward: 0,
+          midasSpeed: 0,
+          moreCoins: 0,
+          equip: 0,
+          timeCoin: 0,
+          coach: 0,
+          reaction: 0,
+          multiBall: 0,
+          goldBall: 0,
+          fireBall: 0,
+          synergy: 0,
+          team: 0,
+        },
+        max: {
+          click: 10,
+          friend: 5,
+          footy: 5,
+          fCrit: 3,
+          fCoin: 3,
+          crit: 3,
+          cCoin: 3,
+          delay: 3,
+          time: 3,
+          viewer: 5,
+          vLuck: 3,
+          vStand: 5,
+          fSec: 5,
+          fan: 5,
+          attr: 3,
+          drink: 3,
+          midas: 3,
+          mCrit: 3,
+          reward: 5,
+          bigReward: 3,
+          midasSpeed: 3,
+          moreCoins: 3,
+          equip: 3,
+          timeCoin: 3,
+          coach: 3,
+          reaction: 3,
+          multiBall: 3,
+          goldBall: 3,
+          fireBall: 3,
+          synergy: 3,
+          team: 1,
+        },
+        costs: {
+          click: 20,
+          friend: 40,
+          footy: 15,
+          fCrit: 120,
+          fCoin: 25,
+          crit: 100,
+          cCoin: 10,
+          delay: 150,
+          time: 1000,
+          viewer: 300,
+          vLuck: 900,
+          vStand: 70,
+          fSec: 200,
+          fan: 40,
+          attr: 100,
+          drink: 100,
+          midas: 50,
+          mCrit: 100,
+          reward: 30,
+          bigReward: 50,
+          midasSpeed: 50,
+          moreCoins: 50,
+          equip: 10,
+          timeCoin: 300,
+          coach: 50,
+          reaction: 200,
+          multiBall: 300,
+          goldBall: 90,
+          fireBall: 30,
+          synergy: 200,
+          team: 10000,
+        },
+      };
+      const extraCosts = {
+        team: 100000,
+      };
+
+      const nodeData = [
+        {
+          id: "node-click",
+          k: "click",
+          name: "СИЛА УДАРА",
+          cur: "xp",
+          desc: "Увеличивает количество 🔹 за клик",
+        },
+        {
+          id: "node-friend",
+          k: "friend",
+          name: "ДРУГ",
+          cur: "xp",
+          desc: "Автоматически приносит +1🔹 каждые 1с",
+        },
+        {
+          id: "node-footy",
+          k: "footy",
+          name: "ФУТБОЛИСТ",
+          cur: "coin",
+          desc: "Автоматически приносит +4🔹 каждые 1с",
+        },
+         {
+          id: "node-coach",
+          k: "coach",
+          name: "ТРЕНЕР",
+          cur: "coin",
+          desc: "Каждый футболист получает +2/4/6🔹 к силе удара"
+        },
+        {
+          id: "node-fCrit",
+          k: "fCrit",
+          name: "КРИТ ДРУГА",
+          cur: "xp",
+          desc: "Шанс друга нанести удар x3 🔹",
+        },
+        {
+          id: "node-fCoin",
+          k: "fCoin",
+          name: "МОНЕТА ДРУГА",
+          cur: "coin",
+          desc: "Шанс друга получить 🟡 при крите",
+        },
+        {
+          id: "node-delay",
+          k: "delay",
+          name: "ЗАТЯЖКА",
+          cur: "xp",
+          desc: "Шанс получить доп. 1 секунду",
+        },
+        {
+          id: "node-time",
+          k: "time",
+          name: "ВРЕМЯ",
+          cur: "xp",
+          desc: "Увеличивает таймер на 1 секунду",
+        },
+        {
+          id: "node-crit",
+          k: "crit",
+          name: "ШАНС КРИТА",
+          cur: "xp",
+          desc: "Шанс нанести удар x3 🔹",
+        },
+        {
+          id: "node-cCoin",
+          k: "cCoin",
+          name: "КРИТ-МОНЕТА",
+          cur: "coin",
+          desc: "Шанс получить 🟡 при крите",
+        },
+        {
+          id: "node-midas",
+          k: "midas",
+          name: "МИДАС",
+          cur: "coin",
+          desc: "Шанс получить 🟡 периодически",
+        },
+        {
+          id: "node-midasSpeed",
+          k: "midasSpeed",
+          name: "СКОРОСТЬ МИДАСА",
+          cur: "coin",
+          desc: "Мидас срабатывает чаще",
+        },
+        {
+          id: "node-mCrit",
+          k: "mCrit",
+          name: "КРИТ ДОХОДА",
+          cur: "coin",
+          desc: "Шанс удвоить монеты Мидаса",
+        },
+        {
+          id: "node-viewer",
+          k: "viewer",
+          name: "ЗРИТЕЛЬ",
+          cur: "xp",
+          desc: "Увеличивает доход на 2🟡",
+        },
+        {
+          id: "node-v-stand",
+          k: "vStand",
+          name: "ТРИБУНА",
+          cur: "coin",
+          desc: "Зрителей +10",
+        },
+        {
+          id: "node-f-sec",
+          k: "fSec",
+          name: "ФАН-СЕКТОР",
+          cur: "coin",
+          desc: "Фанатов +10",
+        },
+        {
+          id: "node-timeCoin",
+          k: "timeCoin",
+          name: "ВРЕМЯ - ДЕНЬГИ",
+          cur: "xp",
+          desc: "Даёт +1🟡 за каждую секунду от 'Затяжки'",
+        },
+
+        {
+          id: "node-v-luck",
+          k: "vLuck",
+          name: "ЧАЕВЫЕ",
+          cur: "xp",
+          desc: "Шанс на доп. 🟡 от зрителей и фанатов",
+        },
+        {
+          id: "node-fan",
+          k: "fan",
+          name: "ФАНАТ",
+          cur: "coin",
+          desc: "Увеличивает доход на 4🟡",
+        },
+        {
+          id: "node-drink",
+          k: "drink",
+          name: "НАПИТКИ",
+          cur: "coin",
+          desc: "Шанс 30/60/90%, что каждый зритель купит напиток (+1🟡)",
+        },
+        {
+          id: "node-attr",
+          k: "attr",
+          name: "АТРИБУТИКА",
+          cur: "coin",
+          desc: "Шанс 30/60/90%, что каждый фанат купит шарф (+2🟡)",
+        },
+        {
+          id: "node-reward",
+          k: "reward",
+          name: "НАГРАДА",
+          cur: "coin",
+          desc: "Бонусные монеты за XP",
+        },
+        {
+          id: "node-bigReward",
+          k: "bigReward",
+          name: "БОЛЬШОЙ КУШ",
+          cur: "coin",
+          desc: "Усиливает Награду",
+        },
+        {
+          id: "node-moreCoins",
+          k: "moreCoins",
+          name: "БОЛЬШЕ МОНЕТ",
+          cur: "coin",
+          desc: "Даёт больше монет за крит",
+        },
+        {
+          id: "node-equip",
+          k: "equip",
+          name: "ЭКИПИРОВКА",
+          cur: "coin", // будет покупаться за монеты, так как это снаряжение
+          desc: "Увеличивает базовую силу удара на +5, +10, +15",
+},
+{
+  id: "node-reaction",
+  k: "reaction",
+  name: "РЕАКЦИЯ",
+  cur: "xp",
+  desc: "Мяч дольше остаётся на месте (+0.25с)",
+},
+{
+  id: "node-multiBall",
+  k: "multiBall",
+  name: "БОЛЬШЕ МЯЧЕЙ",
+  cur: "xp",
+  desc: "На поле появляется больше мячей",
+},
+{
+  id: "node-goldBall",
+  k: "goldBall",
+  name: "ЗОЛОТОЙ МЯЧ",
+  cur: "coin",
+  desc: "Шанс, что каждый удар даёт 🟡",
+},
+{
+  id: "node-fireBall",
+  k: "fireBall",
+  name: "ОГНЕННЫЙ МЯЧ",
+  cur: "coin",
+  desc: "Шанс, что каждый удар критический x3",
+},
+{
+  id: "node-synergy",
+  k: "synergy",
+  name: "СИНЕРГИЯ",
+  cur: "coin",
+  desc: "Шанс на огненно-золотой мяч (x3 + 🟡)",
+},
+{
+  id: "node-team",
+  k: "team",
+  name: "КОМАНДА",
+  cur: "multi", // Пометим как мульти-валютный для логики
+  desc: "Начать профессиональную карьеру",
+},
+      ];// 1. Храним текущие настройки игрока
+// 1. В объекте теперь храним НАЗВАНИЕ цвета, а не код
+let playerSettings = {
+    head: 1,
+    // Разделяем цвета!
+    shirtColor: 'white',
+    shortsColor: 'white',
+    socksColor: 'white'
+};
+
+const MAX_HEADS = 18;
+
+window.onload = function() {
+    renderPlayerPreview(); 
+};
+
+// 1. Обновление превью в меню
+function renderPlayerPreview() {
+    const box = document.getElementById('player-preview');
+    if (!box) return;
+    
+    // Подставляем разные цвета в пути к файлам!
+    box.innerHTML = `
+        <div class="player-part p-socks" style="background-image: url('players/socks_${playerSettings.socksColor}.png');"></div>
+        <div class="player-part p-shorts" style="background-image: url('players/shorts_${playerSettings.shortsColor}.png');"></div>
+        <div class="player-part p-shirt" style="background-image: url('players/shirt_${playerSettings.shirtColor}.png');"></div>
+        <div class="player-part p-head" style="background-image: url('players/head${playerSettings.head}.png');"></div>
+    `;
+}
+function addRes(type, amt) {
+    // Проверяем, существует ли объект data, чтобы не было ошибок
+    if (typeof data !== 'undefined') {
+        data[type] += amt;
+        
+        // Обновляем текст на экране (золото, опыт и т.д.)
+        if (typeof updateUI === 'function') {
+            updateUI();
+        }
+    } else {
+        console.error("Объект 'data' не найден! Проверь, как он объявлен в начале скрипта.");
+    }
+}
+function updatePartColor(part, colorName) {
+    // part может быть 'shirtColor', 'shortsColor' или 'socksColor'
+    playerSettings[part] = colorName;
+    renderPlayerPreview();
+}
+
+// 2. Функция для стрелочек
+function changeHead(step) {
+    playerSettings.head += step;
+    if (playerSettings.head > MAX_HEADS) playerSettings.head = 1;
+    if (playerSettings.head < 1) playerSettings.head = MAX_HEADS;
+    renderPlayerPreview();
+}
+
+
+// 4. ГЛАВНАЯ КНОПКА: Сохранить и перейти в игру
+function savePlayerAndStart() {
+    const customScreen = document.getElementById("custom-screen");
+    const menuScreen = document.getElementById("menu-screen");
+    const adminUI = document.getElementById("admin-ui");
+
+    // В старой версии работало просто удаление класса, оставим так
+    if (customScreen) customScreen.classList.remove("active");
+    if (adminUI) adminUI.style.display = "flex";
+    if (menuScreen) menuScreen.classList.add("active");
+
+    // Создаем игрока, но с новыми цветами
+    createVisualPlayer(
+        32, 
+        73, 
+        playerSettings.head, 
+        playerSettings.shirtColor, 
+        playerSettings.shortsColor, 
+        playerSettings.socksColor
+    ); 
+}
+
+// 5. Отрисовка игрока на поле
+function createVisualPlayer(percentX, percentY, headNum, sShirt, sShorts, sSocks) {
+    const field = document.getElementById('game-screen');
+    if (!field) return;
+
+    const player = document.createElement('div');
+    player.className = 'player-container';
+    player.style.left = percentX + '%';
+    player.style.top = percentY + '%';
+    player.style.position = 'absolute';
+
+    player.innerHTML = `
+        <div class="player-part p-socks" style="background-image: url('players/socks_${sSocks}.png');"></div>
+        <div class="player-part p-shorts" style="background-image: url('players/shorts_${sShorts}.png');"></div>
+        <div class="player-part p-shirt" style="background-image: url('players/shirt_${sShirt}.png');"></div>
+        <div class="player-part p-head" style="background-image: url('players/head${headNum}.png');"></div>
+    `;
+
+    field.appendChild(player);
+}
+
+// Твой код для дерева навыков ниже (оставил без изменений)
+function initTree() {
+    const tree = document.getElementById("tree");
+    if (!tree) return;
+    nodeData.forEach((n) => {
+        const div = document.createElement("div");
+        div.id = n.id;
+        div.className = "skill-node";
+        div.title = n.desc;
+        div.onclick = () => buy(n.k, n.cur);
+        div.innerHTML = `<small>${n.name}</small><span id="lvl-${n.k}">0/0</span><b class="price-${n.cur}" id="c-${n.k}">0</b>`;
+        tree.appendChild(div);
+    });
+}
+
+      function updateUI() {
+        document.getElementById("total-xp").innerText = Math.floor(data.xp);
+        document.getElementById("total-coins").innerText = Math.floor(
+          data.coins,
+        );
+        nodeData.forEach((n) => {
+          const el = document.getElementById(n.id);
+          const isMax = data.lvls[n.k] >= data.max[n.k];
+          let canSee = false;
+
+          // ЛОГИКА ВИДИМОСТИ
+if (n.k === "click") canSee = true;
+
+// От Силы удара
+if (
+  n.k === "friend" ||
+  n.k === "reaction" ||
+  n.k === "crit"
+) {
+  canSee = data.lvls.click >= 2;
+}
+
+// Левая ветка друга
+if (n.k === "fCrit" || n.k === "viewer") canSee = data.lvls.friend >= 1;
+if (n.k === "fCoin") canSee = data.lvls.fCrit >= 1;
+
+// Ветка зрителей
+if (n.k === "vStand" || n.k === "fan" || n.k === "vLuck")
+  canSee = data.lvls.viewer >= 1;
+if (n.k === "attr" || n.k === "drink" || n.k === "fSec")
+  canSee = data.lvls.fan >= 1;
+
+// Правая верхняя ветка от Реакции
+if (n.k === "equip" || n.k === "delay" || n.k === "multiBall")
+  canSee = data.lvls.reaction >= 1;
+
+if (n.k === "footy") canSee = data.lvls.equip >= 1;
+
+if (n.k === "time") canSee = data.lvls.delay >= 1;
+if (n.k === "timeCoin") canSee = data.lvls.delay >= 1;
+
+// Правая ветка профессии
+if (n.k === "reward" || n.k === "coach")
+  canSee = data.lvls.footy >= 1;
+
+if (n.k === "bigReward" || n.k === "team")
+  canSee = data.lvls.reward >= 1;
+
+// Нижняя ветка критов
+if (n.k === "cCoin") canSee = data.lvls.crit >= 1;
+if (n.k === "midas") canSee = data.lvls.cCoin >= 1;
+
+// Ветка Мидаса
+if (n.k === "mCrit" || n.k === "midasSpeed")
+  canSee = data.lvls.midas >= 1;
+
+// Новая ветка мячей
+if (n.k === "goldBall" || n.k === "fireBall")
+  canSee = data.lvls.multiBall >= 1;
+
+if (n.k === "synergy")
+  canSee = data.lvls.goldBall >= 1 && data.lvls.fireBall >= 1;
+          if (canSee) el.classList.add("visible");
+          el.classList.toggle("maxed", isMax);
+          document.getElementById(`lvl-${n.k}`).innerText = isMax
+            ? "MAX"
+            : `${data.lvls[n.k]}/${data.max[n.k]}`;
+          let icon = n.cur === "xp" ? "🔹" : "🟡";
+          document.getElementById(`c-${n.k}`).innerHTML = isMax
+            ? "✓"
+            : n.k === "team"
+              ? `🟡 10k<br>🔹100k`
+              : `${icon} ${data.costs[n.k]}`;
+          if (!isMax) {
+            let afford =
+              (n.cur === "xp" ? data.xp : data.coins) >= data.costs[n.k];
+            el.classList.toggle("disabled", !afford);
+          }
+        });
+        updateLiveStats();
+      }
+
+      function buy(type, cur) {
+        // 1. Проверка на макс. уровень
+        if (data.lvls[type] >= data.max[type]) return;
+
+        // 2. Логика для "Команды" (Две валюты)
+        if (type === "team") {
+          const costCoin = 10000;
+          const costXP = 100000;
+
+          if (data.coins >= costCoin && data.xp >= costXP) {
+            data.coins -= costCoin;
+            data.xp -= costXP;
+            data.lvls[type]++;
+            updateUI();
+
+            // Всплывающее окно
+            alert(
+              "🏆 ПОЗДРАВЛЯЕМ!\n\n" +
+                "Вы успешно прошли ДЕМО-ВЕРСИЮ Football Tycoon!\n" +
+                "Ваш путь от любителя до владельца клуба завершен.\n\n" +
+                "Добро пожаловать в Профессиональный режим! Теперь вы — часть большой игры.",
+            );
+          } else {
+            alert(
+              `Чтобы собрать свою команду, нужно накопить:\n🟡 ${costCoin} монет и 🔹 ${costXP} опыта!`,
+            );
+          }
+          return;
+          // Выходим из функции
+        }
+
+        // 3. Стандартная логика для остальных навыков
+        let currencyKey = cur === "xp" ? "xp" : "coins";
+
+        if (data[currencyKey] >= data.costs[type]) {
+  data[currencyKey] -= data.costs[type];
+  data.lvls[type]++;
+
+  // Увеличиваем цену (кроме тех, где это не нужно)
+  data.costs[type] = Math.ceil(data.costs[type] * 1.8);
+
+  updateUI();
+
+  if (type === "multiBall" && document.getElementById("game-screen").classList.contains("active")) {
+    updateMultiBalls();
+  }
+}
+      }
+
+      let gInt, aInt, bInt, ballMoveInterval, curMs, totalEl, sCoins, sClick, sFriend, xpForCoin;
+      let extraBalls = [];
+      let currentMainBallIndex = -1;
+      let currentExtraBallIndexes = [];
+
+function startGame() {
+        if (data.lvls.friend > 0) {
+        startFriend();}
+        sClick = sFriend = sCoins = totalEl = xpForCoin = 0;
+        let maxT = (11 + data.lvls.time) * 1000;
+        curMs = maxT;
+
+document.getElementById("admin-ui").style.display = "none";
+document.getElementById("menu-screen").classList.remove("active");
+document.getElementById("game-screen").classList.add("active");
+document.getElementById("top-stats-ui").classList.add("active");
+
+updateViewersDisplay();
+currentMainBallIndex = -1;
+currentExtraBallIndexes = [];
+updateMultiBalls();
+
+const ballStayTime = 750 + ((data.lvls.reaction || 0) * 250);
+
+ballMoveInterval = setInterval(() => {
+    moveAllBallsToRandomPositions();
+}, ballStayTime);
+
+        gInt = setInterval(() => {
+          curMs -= 10;
+          totalEl += 10;
+          document.getElementById("timer-text").innerText = fmt(curMs);
+          let angle = (curMs / maxT) * 360;
+          document.getElementById("stopwatch-hand").style.transform =
+            `rotate(${angle}deg)`;
+          if (curMs <= 0) stopGame();
+          
+          
+        }, 10);
+        
+let friendTickCounter = 0; 
+
+aInt = setInterval(() => {
+    // 1. Футболисты (стабильный доход 10 раз в сек)
+    let coachBonus = (data.lvls.coach || 0) * 2;
+    let footyPowerPerTick = (data.lvls.footy * 4 + coachBonus) / 10;
+    sFriend += footyPowerPerTick;
+
+    // 2. Друг (удар ровно 1 раз в секунду)
+    if (data.lvls.friend > 0) {
+        friendTickCounter++;
+
+        if (friendTickCounter >= 10) {
+            let fPower = data.lvls.friend * 1;
+            let isFriendCrit = false;
+            let gotCoin = false;
+            let coinAmt = 1 + (data.lvls.moreCoins || 0);
+
+            // ПРОВЕРКА КРИТА ДРУГА
+            if (Math.random() * 100 < (data.lvls.fCrit * 10)) {
+                fPower *= 3;
+                isFriendCrit = true;
+
+                if (Math.random() * 100 < (data.lvls.fCoin * 25)) {
+                    sCoins += coinAmt;
+                    gotCoin = true;
+                }
+            }
+
+            sFriend += fPower;
+
+            // --- ВИЗУАЛИЗАЦИЯ ---
+            const friendDiv = document.getElementById('friend-animation');
+            if (friendDiv && friendDiv.style.display !== 'none') {
+                const rect = friendDiv.getBoundingClientRect();
+                const x = rect.left + rect.width / 2;
+                const y = rect.top;
+
+                spawnFloatingText("+" + fPower, x, y, isFriendCrit ? "crit" : "xp");
+
+                if (gotCoin) {
+                    setTimeout(() => {
+                        spawnFloatingText("+" + coinAmt, x + 30, y - 20, "coin");
+                        document.getElementById("game-coins").innerText = `🟡 ${Math.floor(sCoins)}`;
+                    }, 200);
+                }
+            }
+
+            friendTickCounter = 0;
+        }
+    } else {
+        friendTickCounter = 0;
+    }
+
+    let totalNow = sClick + sFriend;
+    document.getElementById("current-score").innerText = Math.floor(totalNow);
+}, 100);
+
+        // ИНТЕРВАЛ МИДАСА ТЕПЕРЬ ЗАВИСИТ ОТ СКОРОСТИ
+        // База 5000мс, каждый уровень убирает 1000мс.
+        let midasInterval = 5000 - data.lvls.midasSpeed * 1000;
+
+        bInt = setInterval(() => {
+          let b = 0;
+          // Логика Мидаса
+          if (
+            data.lvls.midas > 0 &&
+            Math.random() * 100 < data.lvls.midas * 20
+          ) {
+            // Шанс крита дохода 10, 20, 30%
+            b += Math.random() * 100 < [0, 10, 20, 30][data.lvls.mCrit] ? 2 : 1;
+          }
+
+        
+
+          if (b > 0) {
+            sCoins += b;
+            spawnFloatingText(
+              "+" + b,
+              window.innerWidth / 2 + 50,
+              window.innerHeight / 2,
+              "coin",
+            );
+            document.getElementById("game-coins").innerText = `🟡 ${sCoins}`;
+          }
+        }, midasInterval);
+
+       // Внутри того блока, который ты скинул:
+const vC = data.lvls.viewer + data.lvls.vStand * 10;
+const fC = data.lvls.fan + data.lvls.fSec * 10;
+
+// Считаем бонус тренера отдельно для ясности:
+const coachBonusTotal = data.lvls.footy * (data.lvls.coach * 3);
+      }
+
+  function handleKick(event) {
+  // 1. Ищем новый ID мяча (был kick-me, стал ball)
+let ball = event.currentTarget;
+
+// Поворот именно того мяча, по которому кликнули
+if (ball) {
+  let randomDeg = Math.floor(Math.random() * 360) - 180;
+  ball.style.setProperty("--angle", randomDeg + "deg");
+}
+
+  // 2. Расчет силы (база + экипировка)
+  let p = data.lvls.click + (data.lvls.equip * 5);
+  let isCrit = false;
+
+  // 3. Логика КРИТА
+  if (Math.random() * 100 < data.lvls.crit * 3) {
+    p *= 3;
+    isCrit = true;
+    
+    // Шанс на монету при крите
+    if (Math.random() * 100 < [0, 25, 50, 75][data.lvls.cCoin]) {
+      let bonusAmount = 1 + data.lvls.moreCoins;
+      sCoins += bonusAmount;
+      spawnFloatingText("+" + bonusAmount, event.clientX + 40, event.clientY - 20, "coin");
+    }
+  }
+
+  // 4. Проверка на "Затяжку времени"
+  if (Math.random() * 100 < [0, 0.5, 1, 2][data.lvls.delay]) {
+    curMs += 1000; 
+
+    // Время - деньги
+    if (data.lvls.timeCoin > 0) {
+      let bonus = data.lvls.timeCoin;
+      sCoins += bonus;
+      spawnFloatingText("+" + bonus, event.clientX + 60, event.clientY + 20, "coin");
+    }
+
+    let b = document.getElementById("time-bonus");
+    if (b) {
+      b.classList.add("show-bonus");
+      setTimeout(() => b.classList.remove("show-bonus"), 500);
+    }
+  }
+
+  // 5. Начисление и обновление экрана
+  sClick += p;
+  let totalNow = sClick + sFriend;
+  
+  const scoreEl = document.getElementById("current-score");
+  const coinsEl = document.getElementById("game-coins");
+  
+  if (scoreEl) scoreEl.innerText = Math.floor(totalNow);
+  if (coinsEl) coinsEl.innerText = `🟡 ${Math.floor(sCoins)}`;
+
+  // 6. Вылет текста (используем clientX/Y для точности)
+  spawnFloatingText("+" + p, event.clientX, event.clientY, isCrit ? "crit" : "xp");
+
+  // 7. Награда за достижение XP (бонусные монеты)
+  if (data.lvls.reward > 0) {
+    let threshold = 1000 - (data.lvls.reward * 100);
+    if (totalNow >= xpForCoin + threshold) {
+      let bonus = 1 + data.lvls.bigReward;
+      sCoins += bonus;
+      xpForCoin += threshold;
+      spawnFloatingText("+" + bonus, event.clientX - 40, event.clientY - 40, "coin");
+    }
+  }
+}
+
+      function stopGame() {
+    // 1. Остановка таймеров
+    clearInterval(ballMoveInterval);
+    clearInterval(gInt);
+    clearInterval(aInt);
+    clearInterval(bInt);
+
+    extraBalls.forEach(ball => ball.remove());
+    extraBalls = [];
+    // 2. Считаем людей (Зрители и Фанаты)
+    let vC = (data.lvls.viewer || 0) + (data.lvls.vStand || 0) * 10;
+    let fC = (data.lvls.fan || 0) + (data.lvls.fSec || 0) * 10;
+    let totalPeople = vC + fC;
+
+    // 3. Базовый доход (Билеты)
+    let cBase = (vC * 2) + (fC * 4);
+
+    // 4. Чаевые (Удача)
+    let luckChance = (data.lvls.vLuck || 0) * 10; 
+    let luckMoney = 0;
+    for (let i = 0; i < totalPeople; i++) {
+        if (Math.random() * 100 < luckChance) {
+            luckMoney++;
+        }
+    }
+clearInterval(friendAnimationInterval);
+friendAnimationInterval = null;
+
+document.getElementById('friend-animation').style.display = 'none';
+    // 5. Дополнительный доход (Напитки и Атрибутика)
+    let drinkMoney = 0;
+    let attrMoney = 0;
+    let dCh = [0, 30, 60, 90][data.lvls.drink || 0] || 0;
+    let aCh = [0, 30, 60, 90][data.lvls.attr || 0] || 0;
+
+    // Считаем напитки (пьют все)
+    for (let i = 0; i < totalPeople; i++) {
+        if (Math.random() * 100 < dCh) drinkMoney++;
+    }
+    // Считаем атрибутику (только фанаты)
+    for (let i = 0; i < fC; i++) {
+        if (Math.random() * 100 < aCh) attrMoney += 2;
+    }
+
+    // Общий бонус для вывода в старую строку (если нужно)
+    let cExtra = drinkMoney + attrMoney;
+
+    // 6. Итоговые расчеты
+    let totalXP = Math.floor(sClick + sFriend);
+    let totalMatchCoins = sCoins + cBase + cExtra + luckMoney;
+
+    // 7. Вывод данных в UI (Безопасно проверяем наличие элементов)
+    const setVal = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.innerText = val;
+    };
+
+    setVal("res-time", (totalEl / 1000).toFixed(1) + "s");
+    
+    // XP
+    setVal("res-xp-total", totalXP);
+    setVal("res-xp-click", Math.floor(sClick));
+    setVal("res-xp-friend", Math.floor(sFriend));
+
+    // Монеты
+    setVal("res-coin-total", totalMatchCoins);
+    setVal("res-coin-base", cBase);
+    setVal("res-coin-luck", (sCoins + luckMoney));
+    
+    // Бонусы по отдельности (те самые строки, что вызывали ошибку)
+    setVal("res-coin-drink", drinkMoney);
+    setVal("res-coin-attr", attrMoney);
+
+    // 8. Сохранение прогресса
+    data.xp += totalXP;
+    data.coins += totalMatchCoins;
+
+    // --- ЛОГИКА ДИНАМИЧЕСКОГО ОКНА ---
+
+    // 1. Показываем Билеты, если куплены Зрители или Трибуны
+    if (data.lvls.viewer > 0 || data.lvls.vStand > 0 || data.lvls.fan > 0) {
+        document.getElementById("res-section-coin").style.display = "block";
+        document.getElementById("row-res-base").style.display = "flex";
+    }
+
+    // 2. Показываем Удачу, если куплен Мидас, Крит или Удача зрителей
+    if (data.lvls.midas > 0 || data.lvls.vLuck > 0 || data.lvls.cCoin > 0) {
+        document.getElementById("res-section-coin").style.display = "block";
+        document.getElementById("row-res-luck").style.display = "flex";
+    }
+
+    // 3. Показываем Напитки
+    if (data.lvls.drink > 0) {
+        document.getElementById("row-res-drink").style.display = "flex";
+    }
+
+    // 4. Показываем Атрибутику
+    if (data.lvls.attr > 0) {
+        document.getElementById("row-res-attr").style.display = "flex";
+    }
+
+    // 5. Показываем Итоговую строку монет, если доход больше 0
+    if (totalMatchCoins > 0) {
+        document.getElementById("row-res-total-coin").style.display = "flex";
+    }
+
+    // 9. Показываем окно результатов
+    const overlay = document.getElementById("summary-overlay");
+    if (overlay) overlay.style.display = "flex";
+}
+
+      function closeSummary() {
+        
+    document.getElementById("summary-overlay").style.display = "none";
+    
+    
+    // Сбрасываем видимость всех динамических строк
+    const idsToHide = [
+        "res-section-coin", "row-res-base", "row-res-luck", 
+        "row-res-drink", "row-res-attr", "row-res-total-coin"
+    ];
+    idsToHide.forEach(id => {
+        let el = document.getElementById(id);
+        if (el) el.style.display = "none";
+    });
+
+    document.getElementById("top-stats-ui").classList.remove("active");
+    document.getElementById("game-screen").classList.remove("active");
+    document.getElementById("menu-screen").classList.add("active");
+    document.getElementById("admin-ui").style.display = "flex";
+    updateUI();
+    
+}
+
+      function fmt(ms) {
+        let t = Math.max(0, ms);
+        let m = Math.floor(t / 60000);
+        let s = Math.floor((t % 60000) / 1000);
+        let c = Math.floor((t % 1000) / 10);
+        return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}:${c.toString().padStart(2, "0")}`;
+        }
+
+    function updateLiveStats() {
+    const vC = (data.lvls.viewer || 0) + (data.lvls.vStand || 0) * 10;
+    const fC = (data.lvls.fan || 0) + (data.lvls.fSec || 0) * 10;
+    const coachBonusTotal = (data.lvls.footy || 0) * ((data.lvls.coach || 0) * 2);
+
+    const damageVal = data.lvls.click + (data.lvls.equip * 5);
+    const teamVal = (data.lvls.friend * 1) + (data.lvls.footy * 5) + coachBonusTotal;
+    const critVal = (data.lvls.crit * 3) + "%";
+    const delayVal = [0, 0.5, 1, 2][data.lvls.delay] + "%";
+    const incomeVal = (vC * 2) + (fC * 4);
+
+    const a = document.getElementById("top-stat-damage");
+    const b = document.getElementById("top-stat-team");
+    const c = document.getElementById("top-stat-crit");
+    const d = document.getElementById("top-stat-delay");
+    const e = document.getElementById("top-stat-income");
+
+    if (a) a.innerText = damageVal;
+    if (b) b.innerText = teamVal;
+    if (c) c.innerText = critVal;
+    if (d) d.innerText = delayVal;
+    if (e) e.innerText = incomeVal;
+}
+
+      initTree();
+      updateUI();
+      renderPlayerPreview();
+    </script>
+  </body>
+</html>
