@@ -794,6 +794,57 @@
     goldPulse 1.2s ease-in-out infinite;
 }
 
+.fire-ball {
+  animation:
+    ballIdle 4s ease-in-out infinite,
+    firePulse 0.9s ease-in-out infinite;
+  filter:
+    drop-shadow(0 0 6px rgba(255, 80, 0, 0.9))
+    drop-shadow(0 0 12px rgba(255, 120, 0, 0.8))
+    drop-shadow(0 0 20px rgba(255, 180, 50, 0.5));
+}
+
+.combo-ball {
+  animation:
+    ballIdle 4s ease-in-out infinite,
+    comboPulse 1s ease-in-out infinite;
+  filter:
+    drop-shadow(0 0 8px rgba(255, 180, 0, 0.95))
+    drop-shadow(0 0 14px rgba(255, 90, 0, 0.8))
+    drop-shadow(0 0 24px rgba(255, 230, 120, 0.6));
+}
+@keyframes firePulse {
+  0%, 100% {
+    filter:
+      drop-shadow(0 0 6px rgba(255, 80, 0, 0.85))
+      drop-shadow(0 0 12px rgba(255, 120, 0, 0.7))
+      brightness(1);
+  }
+  50% {
+    filter:
+      drop-shadow(0 0 10px rgba(255, 60, 0, 1))
+      drop-shadow(0 0 18px rgba(255, 140, 0, 0.95))
+      drop-shadow(0 0 28px rgba(255, 220, 120, 0.55))
+      brightness(1.18);
+  }
+}
+
+@keyframes comboPulse {
+  0%, 100% {
+    filter:
+      drop-shadow(0 0 8px rgba(255, 180, 0, 0.85))
+      drop-shadow(0 0 14px rgba(255, 100, 0, 0.75))
+      brightness(1);
+  }
+  50% {
+    filter:
+      drop-shadow(0 0 12px rgba(255, 220, 0, 1))
+      drop-shadow(0 0 20px rgba(255, 100, 0, 0.95))
+      drop-shadow(0 0 32px rgba(255, 240, 160, 0.65))
+      brightness(1.22);
+  }
+}
+
 /* На всякий случай: делаем другие контейнеры "сквозными", 
    если они вдруг налезают на мяч */
 .stopwatch-container, .timer-container {
@@ -904,7 +955,7 @@
   top: 660px;
 }
 
-#node-mCrit {
+#node-midasCrit {
   left: 360px;
   top: 660px;
 }
@@ -1173,9 +1224,19 @@ function getRandomFreeBallIndex(usedIndexes = [], forbiddenIndexes = []) {
     return freeIndexes[Math.floor(Math.random() * freeIndexes.length)];
 }
 function rollBallType() {
-    const goldChance = [0, 8, 16, 25][data.lvls.goldBall || 0] || 0;
+    const comboChance = [0, 1, 2, 3][data.lvls.synergy || 0] || 0;
+    const fireChance = [0, 3, 6, 9][data.lvls.fireBall || 0] || 0;
+    const goldChance = [0, 2, 4, 6][data.lvls.goldBall || 0] || 0;
 
-    if (Math.random() * 100 < goldChance) {
+    if (data.lvls.synergy > 0 && Math.random() * 100 < comboChance) {
+        return "combo";
+    }
+
+    if (data.lvls.fireBall > 0 && Math.random() * 100 < fireChance) {
+        return "fire";
+    }
+
+    if (data.lvls.goldBall > 0 && Math.random() * 100 < goldChance) {
         return "gold";
     }
 
@@ -1185,12 +1246,21 @@ function applyBallType(ball, type) {
     if (!ball) return;
 
     ball.dataset.ballType = type;
-    ball.classList.remove("gold-ball");
+    ball.classList.remove("gold-ball", "fire-ball", "combo-ball");
 
     if (type === "gold") {
         ball.src = "match/golden_ball.png";
         ball.classList.add("gold-ball");
-    } else {
+    } 
+    else if (type === "fire") {
+        ball.src = "match/fire_ball.png";
+        ball.classList.add("fire-ball");
+    } 
+    else if (type === "combo") {
+        ball.src = "match/combo_ball.png";
+        ball.classList.add("combo-ball");
+    } 
+    else {
         ball.src = "match/ball.png";
     }
 }
@@ -1248,7 +1318,7 @@ function moveAllBallsToRandomPositions() {
     currentExtraBallIndexes = [];
 
     extraBalls.forEach((ball) => {
-        const shouldShow = Math.random() < 0.05;
+       const shouldShow = Math.random() < [0, 0.10, 0.15, 0.20][data.lvls.multiBall || 0];
 
         if (!shouldShow) {
             ball.style.display = "none";
@@ -1438,7 +1508,7 @@ loadViewerAtlas();
           attr: 0,
           drink: 0,
           midas: 0,
-          mCrit: 0,
+          midasCrit: 0,
           reward: 0,
           bigReward: 0,
           midasSpeed: 0,
@@ -1471,7 +1541,7 @@ loadViewerAtlas();
           attr: 3,
           drink: 3,
           midas: 3,
-          mCrit: 3,
+          midasCrit: 3,
           reward: 5,
           bigReward: 3,
           midasSpeed: 3,
@@ -1488,23 +1558,23 @@ loadViewerAtlas();
         },
         costs: {
           click: 20,
-          friend: 40,
+          friend: 30,
           footy: 15,
           fCrit: 120,
-          fCoin: 25,
+          fCoin: 20,
           crit: 100,
-          cCoin: 10,
+          cCoin: 700,
           delay: 150,
-          time: 1000,
+          time: 900,
           viewer: 300,
-          vLuck: 900,
-          vStand: 70,
+          vLuck: 1000,
+          vStand: 1500,
           fSec: 200,
           fan: 40,
           attr: 100,
           drink: 100,
           midas: 50,
-          mCrit: 100,
+          midasCrit: 80,
           reward: 30,
           bigReward: 50,
           midasSpeed: 50,
@@ -1514,9 +1584,9 @@ loadViewerAtlas();
           coach: 50,
           reaction: 200,
           multiBall: 300,
-          goldBall: 90,
-          fireBall: 30,
-          synergy: 200,
+          goldBall: 50,
+          fireBall: 600,
+          synergy: 100,
           team: 10000,
         },
       };
@@ -1592,7 +1662,7 @@ loadViewerAtlas();
           id: "node-cCoin",
           k: "cCoin",
           name: "КРИТ-МОНЕТА",
-          cur: "coin",
+          cur: "xp",
           desc: "Шанс получить 🟡 при крите",
         },
         {
@@ -1610,8 +1680,8 @@ loadViewerAtlas();
           desc: "Мидас срабатывает чаще",
         },
         {
-          id: "node-mCrit",
-          k: "mCrit",
+          id: "node-midasCrit",
+          k: "midasCrit",
           name: "КРИТ ДОХОДА",
           cur: "coin",
           desc: "Шанс удвоить монеты Мидаса",
@@ -1627,7 +1697,7 @@ loadViewerAtlas();
           id: "node-v-stand",
           k: "vStand",
           name: "ТРИБУНА",
-          cur: "coin",
+          cur: "xp",
           desc: "Зрителей +10",
         },
         {
@@ -1699,7 +1769,7 @@ loadViewerAtlas();
           k: "equip",
           name: "ЭКИПИРОВКА",
           cur: "coin", // будет покупаться за монеты, так как это снаряжение
-          desc: "Увеличивает базовую силу удара на +5, +10, +15",
+          desc: "Увеличивает базовую силу удара на +2, +3, +5",
 },
 {
   id: "node-reaction",
@@ -1726,7 +1796,7 @@ loadViewerAtlas();
   id: "node-fireBall",
   k: "fireBall",
   name: "ОГНЕННЫЙ МЯЧ",
-  cur: "coin",
+  cur: "xp",
   desc: "Шанс, что каждый удар критический x3",
 },
 {
@@ -1911,7 +1981,7 @@ if (n.k === "cCoin") canSee = data.lvls.crit >= 1;
 if (n.k === "midas") canSee = data.lvls.cCoin >= 1;
 
 // Ветка Мидаса
-if (n.k === "mCrit" || n.k === "midasSpeed")
+if (n.k === "midasCrit" || n.k === "midasSpeed")
   canSee = data.lvls.midas >= 1;
 
 // Новая ветка мячей
@@ -2105,7 +2175,7 @@ aInt = setInterval(() => {
             Math.random() * 100 < data.lvls.midas * 20
           ) {
             // Шанс крита дохода 10, 20, 30%
-            b += Math.random() * 100 < [0, 10, 20, 30][data.lvls.mCrit] ? 2 : 1;
+            b += Math.random() * 100 < [0, 10, 20, 30][data.lvls.midasCrit] ? 2 : 1;
           }
 
         
@@ -2158,9 +2228,24 @@ if (Math.random() * 100 < data.lvls.crit * 3) {
 const clickedBall = event.currentTarget;
 const ballType = clickedBall?.dataset?.ballType || "normal";
 
+// Золотой мяч: +1 монета
 if (ballType === "gold") {
   sCoins += 1;
   spawnFloatingText("+1", event.clientX + 35, event.clientY - 35, "coin");
+}
+
+// Огненный мяч: x3 XP
+if (ballType === "fire") {
+  p *= 3;
+  spawnFloatingText("FIRE!", event.clientX + 35, event.clientY - 35, "crit");
+}
+
+// Комбо-мяч: x3 XP + 1 монета
+if (ballType === "combo") {
+  p *= 3;
+  sCoins += 1;
+  spawnFloatingText("COMBO!", event.clientX + 35, event.clientY - 35, "crit");
+  spawnFloatingText("+1", event.clientX + 65, event.clientY - 10, "coin");
 }
 
   // 4. Проверка на "Затяжку времени"
