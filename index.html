@@ -1067,18 +1067,26 @@
     </div>
 
     <div class="res-title-xp">🔹 Опыт (XP)</div>
-    <div class="summary-row">
-      <span>👆 Клики</span>
-      <span id="res-xp-click">0</span>
-    </div>
-    <div class="summary-row">
-      <span>🤖 Авто-удары</span>
-      <span id="res-xp-friend">0</span>
-    </div>
-    <div class="summary-row res-total-row" style="color: #3498db; border-top-color: #3498db;">
-      <b>ВСЕГО XP:</b>
-      <b id="res-xp-total">0</b>
-    </div>
+<div class="summary-row">
+  <span>👆 Клики</span>
+  <span id="res-xp-click">0</span>
+</div>
+<div class="summary-row" id="row-res-friend-xp" style="display:none;">
+  <span>🐕 Друг</span>
+  <span id="res-xp-friend">0</span>
+</div>
+<div class="summary-row" id="row-res-footy-xp" style="display:none;">
+  <span>👟 Футболисты</span>
+  <span id="res-xp-footy">0</span>
+</div>
+<div class="summary-row" id="row-res-ball-xp" style="display:none;">
+  <span>⚽ Спец-мячи</span>
+  <span id="res-xp-ball">0</span>
+</div>
+<div class="summary-row res-total-row" style="color: #3498db; border-top-color: #3498db;">
+  <b>ВСЕГО XP:</b>
+  <b id="res-xp-total">0</b>
+</div>
 
     <div class="res-title-coin" id="res-section-coin" style="display:none;">🟡 Доход (МОНЕТЫ)</div>
 
@@ -1090,6 +1098,10 @@
 <div class="summary-row" id="row-res-luck" style="display:none;">
   <span>🍀 Удача</span>
   <span id="res-coin-luck">0</span>
+</div>
+<div class="summary-row" id="row-res-ball-coin" style="display:none;">
+  <span>⚽ Спец-мячи</span>
+  <span id="res-coin-ball">0</span>
 </div>
 
 <div class="summary-row" id="row-res-drink" style="display:none;">
@@ -1682,7 +1694,7 @@ loadViewerAtlas();
         {
           id: "node-midasCrit",
           k: "midasCrit",
-          name: "КРИТ МИДАСА",
+          name: "КРИТ ДОХОДА",
           cur: "coin",
           desc: "Шанс удвоить монеты Мидаса",
         },
@@ -1748,14 +1760,14 @@ loadViewerAtlas();
           k: "reward",
           name: "НАГРАДА",
           cur: "coin",
-          desc: "Бонусная монета за набранные 1000, 900, 800, 700 и 600 XP",
+          desc: "Бонусные монеты за XP",
         },
         {
           id: "node-bigReward",
           k: "bigReward",
           name: "БОЛЬШОЙ КУШ",
           cur: "coin",
-          desc: "Усиливает Награду на 1,2 и 3 монеты",
+          desc: "Усиливает Награду",
         },
         {
           id: "node-moreCoins",
@@ -2044,12 +2056,20 @@ if (n.k === "synergy")
         // 3. Стандартная логика для остальных навыков
         let currencyKey = cur === "xp" ? "xp" : "coins";
 
-        if (data[currencyKey] >= data.costs[type]) {
+  if (data[currencyKey] >= data.costs[type]) {
   data[currencyKey] -= data.costs[type];
   data.lvls[type]++;
 
-  // Увеличиваем цену (кроме тех, где это не нужно)
-  data.costs[type] = Math.ceil(data.costs[type] * 1.8);
+  // Особый рост цены для Реакции
+  if (type === "reaction") {
+    if (data.lvls[type] === 1) {
+      data.costs[type] = 1000;
+    } else if (data.lvls[type] === 2) {
+      data.costs[type] = 10000;
+    }
+  } else {
+    data.costs[type] = Math.ceil(data.costs[type] * 1.8);
+  }
 
   updateUI();
 
@@ -2059,7 +2079,7 @@ if (n.k === "synergy")
 }
       }
 
-      let gInt, aInt, bInt, ballMoveInterval, curMs, totalEl, sCoins, sClick, sFriend, xpForCoin;
+      let gInt, aInt, bInt, ballMoveInterval, curMs, totalEl, sCoins, sClick, sFriend, sFooty, xpForCoin, sBallXP, sBallCoins;
       let extraBalls = [];
       let currentMainBallIndex = -1;
       let currentExtraBallIndexes = [];
@@ -2067,7 +2087,7 @@ if (n.k === "synergy")
 function startGame() {
         if (data.lvls.friend > 0) {
         startFriend();}
-        sClick = sFriend = sCoins = totalEl = xpForCoin = 0;
+        sClick = sFriend = sFooty = sCoins = totalEl = xpForCoin = sBallXP = sBallCoins = 0;
         let maxT = (11 + data.lvls.time) * 1000;
         curMs = maxT;
 
@@ -2109,9 +2129,9 @@ let friendTickCounter = 0;
 
 aInt = setInterval(() => {
     // 1. Футболисты (стабильный доход 10 раз в сек)
-    let coachBonus = (data.lvls.coach || 0) * 2;
-    let footyPowerPerTick = (data.lvls.footy * 4 + coachBonus) / 10;
-    sFriend += footyPowerPerTick;
+    // 1. Футболисты (стабильный доход 10 раз в сек)
+      let coachBonus = (data.lvls.coach || 0) * 2;
+      let footyPowerPerTick = (data.lvls.footy * 4 + coachBonus) / 10; sFooty += footyPowerPerTick;
 
     // 2. Друг (удар ровно 1 раз в секунду)
     if (data.lvls.friend > 0) {
@@ -2159,7 +2179,7 @@ aInt = setInterval(() => {
         friendTickCounter = 0;
     }
 
-    let totalNow = sClick + sFriend;
+    let totalNow = sClick + sFriend + sFooty;
     document.getElementById("current-score").innerText = Math.floor(totalNow);
 }, 100);
 
@@ -2201,7 +2221,7 @@ const coachBonusTotal = data.lvls.footy * (data.lvls.coach * 3);
       }
 
   function handleKick(event) {
-  // 1. Ищем новый ID мяча (был kick-me, стал ball)
+ 
 let ball = event.currentTarget;
 
 // Поворот именно того мяча, по которому кликнули
@@ -2232,19 +2252,27 @@ const ballType = clickedBall?.dataset?.ballType || "normal";
 // Золотой мяч: +1 монета
 if (ballType === "gold") {
   sCoins += 1;
+  sBallCoins += 1;
   spawnFloatingText("+1", event.clientX + 35, event.clientY - 35, "coin");
 }
 
 // Огненный мяч: x3 XP
 if (ballType === "fire") {
+  const oldP = p;
   p *= 3;
+  sBallXP += (p - oldP);
   spawnFloatingText("FIRE!", event.clientX + 35, event.clientY - 35, "crit");
 }
 
 // Комбо-мяч: x3 XP + 1 монета
 if (ballType === "combo") {
+  const oldP = p;
   p *= 3;
+  sBallXP += (p - oldP);
+
   sCoins += 1;
+  sBallCoins += 1;
+
   spawnFloatingText("COMBO!", event.clientX + 35, event.clientY - 35, "crit");
   spawnFloatingText("+1", event.clientX + 65, event.clientY - 10, "coin");
 }
@@ -2269,7 +2297,7 @@ if (ballType === "combo") {
 
   // 5. Начисление и обновление экрана
   sClick += p;
-  let totalNow = sClick + sFriend;
+  let totalNow = sClick + sFriend + sFooty;
   
   const scoreEl = document.getElementById("current-score");
   const coinsEl = document.getElementById("game-coins");
@@ -2340,7 +2368,7 @@ document.getElementById('friend-animation').style.display = 'none';
     let cExtra = drinkMoney + attrMoney;
 
     // 6. Итоговые расчеты
-    let totalXP = Math.floor(sClick + sFriend);
+    let totalXP = Math.floor(sClick + sFriend + sFooty);
     let totalMatchCoins = sCoins + cBase + cExtra + luckMoney;
 
     // 7. Вывод данных в UI (Безопасно проверяем наличие элементов)
@@ -2355,11 +2383,25 @@ document.getElementById('friend-animation').style.display = 'none';
     setVal("res-xp-total", totalXP);
     setVal("res-xp-click", Math.floor(sClick));
     setVal("res-xp-friend", Math.floor(sFriend));
+    setVal("res-xp-footy", Math.floor(sFooty));
+    setVal("res-xp-ball", Math.floor(sBallXP));
 
+    if (sBallXP > 0) {
+    document.getElementById("row-res-ball-xp").style.display = "flex";
+}
+
+    if (data.lvls.friend > 0) {
+    document.getElementById("row-res-friend-xp").style.display = "flex";
+}
+
+    if (data.lvls.footy > 0) {
+    document.getElementById("row-res-footy-xp").style.display = "flex";
+}
     // Монеты
     setVal("res-coin-total", totalMatchCoins);
     setVal("res-coin-base", cBase);
     setVal("res-coin-luck", (sCoins + luckMoney));
+    setVal("res-coin-ball", Math.floor(sBallCoins));
     
     // Бонусы по отдельности (те самые строки, что вызывали ошибку)
     setVal("res-coin-drink", drinkMoney);
@@ -2382,6 +2424,10 @@ document.getElementById('friend-animation').style.display = 'none';
         document.getElementById("res-section-coin").style.display = "block";
         document.getElementById("row-res-luck").style.display = "flex";
     }
+    if (sBallCoins > 0) {
+    document.getElementById("res-section-coin").style.display = "block";
+    document.getElementById("row-res-ball-coin").style.display = "flex";
+}
 
     // 3. Показываем Напитки
     if (data.lvls.drink > 0) {
@@ -2410,9 +2456,17 @@ document.getElementById('friend-animation').style.display = 'none';
     
     // Сбрасываем видимость всех динамических строк
     const idsToHide = [
-        "res-section-coin", "row-res-base", "row-res-luck", 
-        "row-res-drink", "row-res-attr", "row-res-total-coin"
-    ];
+    "res-section-coin",
+    "row-res-base",
+    "row-res-luck",
+    "row-res-ball-coin",
+    "row-res-drink",
+    "row-res-attr",
+    "row-res-total-coin",
+    "row-res-ball-xp",
+    "row-res-friend-xp",
+    "row-res-footy-xp"
+];
     idsToHide.forEach(id => {
         let el = document.getElementById(id);
         if (el) el.style.display = "none";
