@@ -2211,7 +2211,8 @@ if (ball) {
 }
 
   // 2. Расчет силы (база + экипировка)
-let p = data.lvls.click + (data.lvls.equip * 5);
+const equipBonuses = [0, 2, 5, 10]; // 0 ур = 0, 1 ур = +2, 2 ур = +5, 3 ур = +10
+let p = data.lvls.click + (equipBonuses[data.lvls.equip] || 0);
 let isCrit = false;
 
 if (Math.random() * 100 < data.lvls.crit * 3) {
@@ -2438,7 +2439,8 @@ document.getElementById('friend-animation').style.display = 'none';
     const fC = (data.lvls.fan || 0) + (data.lvls.fSec || 0) * 10;
     const coachBonusTotal = (data.lvls.footy || 0) * ((data.lvls.coach || 0) * 2);
 
-    const damageVal = data.lvls.click + (data.lvls.equip * 5);
+    const eBonuses = [0, 2, 5, 10]; 
+    const damageVal = data.lvls.click + (eBonuses[data.lvls.equip] || 0);
     const teamVal = (data.lvls.friend * 1) + (data.lvls.footy * 5) + coachBonusTotal;
     const critVal = (data.lvls.crit * 3) + "%";
     const delayVal = [0, 0.5, 1, 2][data.lvls.delay] + "%";
