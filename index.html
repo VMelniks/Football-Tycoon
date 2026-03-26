@@ -760,6 +760,40 @@
   transform: translate(-50%, -50%) rotate(var(--angle, 0deg)) scale(0.9);
 }
 
+.gold-ball {
+  filter:
+    drop-shadow(0 0 6px rgba(255, 215, 0, 0.9))
+    drop-shadow(0 0 12px rgba(255, 200, 0, 0.7))
+    drop-shadow(0 0 18px rgba(255, 255, 180, 0.45));
+}
+
+.gold-ball::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+@keyframes goldPulse {
+  0%, 100% {
+    filter:
+      drop-shadow(0 0 6px rgba(255, 215, 0, 0.85))
+      drop-shadow(0 0 12px rgba(255, 200, 0, 0.65))
+      brightness(1);
+  }
+  50% {
+    filter:
+      drop-shadow(0 0 10px rgba(255, 230, 80, 1))
+      drop-shadow(0 0 18px rgba(255, 200, 0, 0.9))
+      drop-shadow(0 0 28px rgba(255, 255, 210, 0.55))
+      brightness(1.15);
+  }
+}
+.gold-ball {
+  animation:
+    ballIdle 4s ease-in-out infinite,
+    goldPulse 1.2s ease-in-out infinite;
+}
+
 /* На всякий случай: делаем другие контейнеры "сквозными", 
    если они вдруг налезают на мяч */
 .stopwatch-container, .timer-container {
@@ -1138,14 +1172,37 @@ function getRandomFreeBallIndex(usedIndexes = [], forbiddenIndexes = []) {
 
     return freeIndexes[Math.floor(Math.random() * freeIndexes.length)];
 }
+function rollBallType() {
+    const goldChance = [0, 8, 16, 25][data.lvls.goldBall || 0] || 0;
+
+    if (Math.random() * 100 < goldChance) {
+        return "gold";
+    }
+
+    return "normal";
+}
+function applyBallType(ball, type) {
+    if (!ball) return;
+
+    ball.dataset.ballType = type;
+    ball.classList.remove("gold-ball");
+
+    if (type === "gold") {
+        ball.src = "match/golden_ball.png";
+        ball.classList.add("gold-ball");
+    } else {
+        ball.src = "match/ball.png";
+    }
+}
 
 function createExtraBall() {
     const field = document.getElementById("game-screen");
     if (!field) return null;
 
-    const ball = document.createElement("img");
+const ball = document.createElement("img");
 ball.src = "match/ball.png";
 ball.className = "extra-ball";
+ball.dataset.ballType = "normal";
 ball.style.setProperty("--angle", "0deg");
 ball.draggable = false;
 ball.onclick = handleKick;
@@ -1182,10 +1239,14 @@ function moveAllBallsToRandomPositions() {
     // Основной мяч: не в ту же клетку, где был
     moveBallToRandomPosition(usedIndexes);
 
-    // Сброс позиций доп. мячей
+    // Основной мяч пока обычный
+    const mainBall = document.getElementById("ball");
+    if (mainBall) {
+        applyBallType(mainBall, "normal");
+    }
+
     currentExtraBallIndexes = [];
 
-    // Доп. мячи: не накладываются друг на друга и не лезут в основной
     extraBalls.forEach((ball) => {
         const shouldShow = Math.random() < 0.05;
 
@@ -1203,10 +1264,14 @@ function moveAllBallsToRandomPositions() {
         }
 
         const pos = ballPositions[newIndex];
+        const ballType = rollBallType();
+
         ball.style.display = "block";
         ball.style.left = pos.left;
         ball.style.top = pos.top;
         ball.style.setProperty("--angle", "0deg");
+
+        applyBallType(ball, ballType);
 
         usedIndexes.push(newIndex);
         currentExtraBallIndexes.push(newIndex);
@@ -1944,6 +2009,12 @@ document.getElementById("top-stats-ui").classList.add("active");
 updateViewersDisplay();
 currentMainBallIndex = -1;
 currentExtraBallIndexes = [];
+
+const mainBall = document.getElementById("ball");
+if (mainBall) {
+    applyBallType(mainBall, "normal");
+}
+
 updateMultiBalls();
 
 const ballStayTime = 750 + ((data.lvls.reaction || 0) * 250);
@@ -2070,21 +2141,27 @@ if (ball) {
 }
 
   // 2. Расчет силы (база + экипировка)
-  let p = data.lvls.click + (data.lvls.equip * 5);
-  let isCrit = false;
+let p = data.lvls.click + (data.lvls.equip * 5);
+let isCrit = false;
 
-  // 3. Логика КРИТА
-  if (Math.random() * 100 < data.lvls.crit * 3) {
-    p *= 3;
-    isCrit = true;
-    
-    // Шанс на монету при крите
-    if (Math.random() * 100 < [0, 25, 50, 75][data.lvls.cCoin]) {
-      let bonusAmount = 1 + data.lvls.moreCoins;
-      sCoins += bonusAmount;
-      spawnFloatingText("+" + bonusAmount, event.clientX + 40, event.clientY - 20, "coin");
-    }
+if (Math.random() * 100 < data.lvls.crit * 3) {
+  p *= 3;
+  isCrit = true;
+
+  if (Math.random() * 100 < [0, 25, 50, 75][data.lvls.cCoin]) {
+    let bonusAmount = 1 + data.lvls.moreCoins;
+    sCoins += bonusAmount;
+    spawnFloatingText("+" + bonusAmount, event.clientX + 40, event.clientY - 20, "coin");
   }
+}
+
+const clickedBall = event.currentTarget;
+const ballType = clickedBall?.dataset?.ballType || "normal";
+
+if (ballType === "gold") {
+  sCoins += 1;
+  spawnFloatingText("+1", event.clientX + 35, event.clientY - 35, "coin");
+}
 
   // 4. Проверка на "Затяжку времени"
   if (Math.random() * 100 < [0, 0.5, 1, 2][data.lvls.delay]) {

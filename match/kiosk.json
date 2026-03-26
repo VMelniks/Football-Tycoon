@@ -1,0 +1,63 @@
+{
+  "frames": {
+    "kiosk.png": {
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 374,
+        "h": 264
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 3,
+        "y": 1,
+        "w": 374,
+        "h": 264
+      },
+      "sourceSize": {
+        "w": 404,
+        "h": 270
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "kiosk1.png": {
+      "frame": {
+        "x": 374,
+        "y": 0,
+        "w": 374,
+        "h": 264
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 3,
+        "y": 1,
+        "w": 374,
+        "h": 264
+      },
+      "sourceSize": {
+        "w": 404,
+        "h": 270
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    }
+  },
+  "meta": {
+    "app": "http://free-tex-packer.com",
+    "version": "0.6.7",
+    "image": "texture.png",
+    "format": "RGBA8888",
+    "size": {
+      "w": 748,
+      "h": 264
+    },
+    "scale": 1
+  }
+}
