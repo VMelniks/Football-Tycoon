@@ -1204,14 +1204,6 @@
         <span>🍀 Удача</span>
         <span id="res-coin-luck">0</span>
       </div>
-      <div class="summary-row" id="row-res-midas" style="display:none;">
-  <span>✨ Мидас</span>
-  <span id="res-coin-midas">0</span>
-</div>
-      <div class="summary-row" id="row-res-reward" style="display:none;">
-  <span>🏆 Награда</span>
-  <span id="res-coin-reward">0</span>
-</div>
 
       <div class="summary-row" id="row-res-ball-coin" style="display:none;">
         <span>⚽ Спец-мячи</span>
@@ -1680,44 +1672,26 @@ loadViewerAtlas();
 
 
       // ... (функция spawnFloatingText и объект data остаются как у тебя) ...
- function spawnFloatingText(text, x, y, type = "xp") {
-  const el = document.createElement("div");
+      function spawnFloatingText(text, x, y, type = "xp") {
+        const el = document.createElement("div");
+        if (type === "coin") {
+          el.className = "floating-coin";
+          el.innerHTML = text + " 🟡";
+        } else {
+          el.className = "floating-xp";
+          el.innerHTML = text + " 🔹";
+          if (type === "crit") {
+            el.style.color = "#e74c3c";
+            el.style.fontSize = "2rem";
+            el.style.scale = "1.2";
+          }
+        }
+        el.style.left = x - 20 + "px";
+        el.style.top = y - 20 + "px";
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 1000);
+      }
 
-  // 🔥 SUPER CRIT — отдельная логика
-  if (text === "SUPER CRIT!") {
-    el.className = "floating-xp";
-    el.innerHTML = text;
-
-    el.style.color = "#ff00ff";
-    el.style.fontSize = "2.5rem";
-    el.style.scale = "1.4";
-    el.style.textShadow = "0 0 10px #ff00ff";
-  }
-
-  // 💰 Монеты
-  else if (type === "coin") {
-    el.className = "floating-coin";
-    el.innerHTML = text + " 🟡";
-  }
-
-  // 🔹 XP / крит
-  else {
-    el.className = "floating-xp";
-    el.innerHTML = text + " 🔹";
-
-    if (type === "crit") {
-      el.style.color = "#e74c3c";
-      el.style.fontSize = "2rem";
-      el.style.scale = "1.2";
-    }
-  }
-
-  el.style.left = x - 20 + "px";
-  el.style.top = y - 20 + "px";
-
-  document.body.appendChild(el);
-  setTimeout(() => el.remove(), 1000);
-}
       let data = {
         xp: 0,
         coins: 0,
@@ -2356,7 +2330,7 @@ if (!isMax) {
       }
 
       let gInt, aInt, bInt, ballMoveInterval, extraBallLifeInterval, extraBallSpawnInterval, curMs, totalEl,
-    sCoins, sGems, sClick, sFriend, sFooty, xpForCoin, personalXpForGem, sBallXP, sBallCoins, sBallGems, sPersonalRewardGems, sRewardCoins, sMidasCoins;
+          sCoins, sGems, sClick, sFriend, sFooty, xpForCoin, personalXpForGem, sBallXP, sBallCoins, sBallGems, sPersonalRewardGems;
       let extraBalls = [];
       let currentMainBallIndex = -1;
       let currentExtraBallIndexes = [];
@@ -2364,7 +2338,7 @@ if (!isMax) {
 function startGame() {
         if (data.lvls.friend > 0) {
         startFriend();}
-        sClick = sFriend = sFooty = sCoins = sGems = totalEl = xpForCoin = personalXpForGem = sBallXP = sBallCoins = sBallGems = sPersonalRewardGems = sRewardCoins = sMidasCoins =  0;
+        sClick = sFriend = sFooty = sCoins = sGems = totalEl = xpForCoin = personalXpForGem = sBallXP = sBallCoins = sBallGems = sPersonalRewardGems = 0;
         let maxT = (11 + data.lvls.time) * 1000;
         curMs = maxT;
 
@@ -2487,16 +2461,15 @@ aInt = setInterval(() => {
         
 
           if (b > 0) {
-  sCoins += b;
-  sMidasCoins += b;
-  spawnFloatingText(
-    "+" + b,
-    window.innerWidth / 2 + 50,
-    window.innerHeight / 2,
-    "coin",
-  );
-  document.getElementById("game-coins").innerText = `🟡 ${sCoins}`;
-}
+            sCoins += b;
+            spawnFloatingText(
+              "+" + b,
+              window.innerWidth / 2 + 50,
+              window.innerHeight / 2,
+              "coin",
+            );
+            document.getElementById("game-coins").innerText = `🟡 ${sCoins}`;
+          }
         }, midasInterval);
 
        // Внутри того блока, который ты скинул:
@@ -2521,7 +2494,6 @@ if (ball) {
 const equipBonuses = [0, 2, 5, 10]; // 0 ур = 0, 1 ур = +2, 2 ур = +5, 3 ур = +10
 let p = data.lvls.click + (equipBonuses[data.lvls.equip] || 0);
 let isCrit = false;
-let isSuperCrit = false;
 
 if (Math.random() * 100 < data.lvls.crit * 3) {
   p *= 3;
@@ -2549,7 +2521,6 @@ if (ballType === "fire") {
   const oldP = p;
   p *= 3;
   sBallXP += (p - oldP);
-  if (isCrit) isSuperCrit = true;
   spawnFloatingText("FIRE!", event.clientX + 35, event.clientY - 35, "crit");
 }
 
@@ -2559,7 +2530,6 @@ if (ballType === "combo") {
   const oldP = p;
   p *= 3;
   sBallXP += (p - oldP);
-  if (isCrit) isSuperCrit = true;
 
   sCoins += 1;
   sBallCoins += 1;
@@ -2607,19 +2577,14 @@ if (ballType === "crystal") {
   if (coinsEl) coinsEl.innerText = `🟡 ${Math.floor(sCoins)}`;
 
   // 6. Вылет текста (используем clientX/Y для точности)
-  if (isSuperCrit) {
-  spawnFloatingText("SUPER CRIT!", event.clientX, event.clientY, "crit");
-} else {
   spawnFloatingText("+" + p, event.clientX, event.clientY, isCrit ? "crit" : "xp");
-}
 
 // 7. Награда за достижение XP (бонусные монеты)
 if (data.lvls.reward > 0) {
   let threshold = 1000 - (data.lvls.reward * 100);
-  while (totalNow >= xpForCoin + threshold) {
+  if (totalNow >= xpForCoin + threshold) {
     let bonus = 1 + data.lvls.bigReward;
     sCoins += bonus;
-    sRewardCoins += bonus;
     xpForCoin += threshold;
     spawnFloatingText("+" + bonus, event.clientX - 40, event.clientY - 40, "coin");
   }
@@ -2723,12 +2688,10 @@ document.getElementById('friend-animation').style.display = 'none';
     document.getElementById("row-res-footy-xp").style.display = "flex";
 }
     // Монеты
-   setVal("res-coin-total", totalMatchCoins);
-   setVal("res-coin-base", cBase);
-   setVal("res-coin-luck", luckMoney);
-   setVal("res-coin-midas", Math.floor(sMidasCoins));
-   setVal("res-coin-reward", Math.floor(sRewardCoins));
-   setVal("res-coin-ball", Math.floor(sBallCoins));
+    setVal("res-coin-total", totalMatchCoins);
+    setVal("res-coin-base", cBase);
+    setVal("res-coin-luck", (sCoins + luckMoney));
+    setVal("res-coin-ball", Math.floor(sBallCoins));
     
     // Бонусы по отдельности 
     setVal("res-coin-drink", drinkMoney);
@@ -2750,17 +2713,10 @@ updateUI();
     document.getElementById("row-res-base").style.display = "flex";
 }
 
-   if (luckMoney > 0) {
+    // 2. Показываем Удачу, если куплен Мидас, Крит или Удача зрителей
+    if (data.lvls.midas > 0 || data.lvls.vLuck > 0 || data.lvls.cCoin > 0) {
     document.getElementById("summary-coin-col").style.display = "block";
     document.getElementById("row-res-luck").style.display = "flex";
-}
-if (sMidasCoins > 0) {
-    document.getElementById("summary-coin-col").style.display = "block";
-    document.getElementById("row-res-midas").style.display = "flex";
-}
-if (sRewardCoins > 0) {
-    document.getElementById("summary-coin-col").style.display = "block";
-    document.getElementById("row-res-reward").style.display = "flex";
 }
    if (sBallCoins > 0) {
     document.getElementById("summary-coin-col").style.display = "block";
@@ -2821,10 +2777,7 @@ if (totalMatchGems > 0) {
   "row-res-footy-xp",
   "row-res-gem-ball",
   "row-res-gem-personal",
-  "row-res-total-gem",
-  "row-res-reward",
-  "row-res-midas"
-  
+  "row-res-total-gem"
 ];
     idsToHide.forEach(id => {
         let el = document.getElementById(id);

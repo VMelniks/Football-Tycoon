@@ -323,16 +323,30 @@
         font-weight: bold;
         font-size: 1.3rem;
       }
+      .gem-val {
+  color: #6ee7ff;
+  font-weight: bold;
+  font-size: 1.3rem;
+}
+
       .tree-viewport {
-        position: relative;
-        height: 750px;
-        width: 1050px;
-        margin: 10px auto;
-        background: rgba(0, 0, 0, 0.3);
-        border-radius: 20px;
-        border: 2px solid #2ecc71;
-        overflow-y: auto;
-      }
+  position: relative;
+  height: 750px;
+  width: 1050px;
+  margin: 10px auto;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 20px;
+  border: 2px solid #2ecc71;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+#tree {
+  position: relative;
+  width: 100%;
+  min-height: 900px;
+  top: 70px;
+}
       .floating-xp {
         position: absolute;
         pointer-events: none;
@@ -844,6 +858,31 @@
       brightness(1.22);
   }
 }
+.crystal-ball {
+  animation:
+    ballIdle 4s ease-in-out infinite,
+    crystalPulse 1.1s ease-in-out infinite;
+  filter:
+    drop-shadow(0 0 6px rgba(0, 255, 255, 0.9))
+    drop-shadow(0 0 12px rgba(100, 220, 255, 0.8))
+    drop-shadow(0 0 22px rgba(180, 255, 255, 0.55));
+}
+
+@keyframes crystalPulse {
+  0%, 100% {
+    filter:
+      drop-shadow(0 0 6px rgba(0, 255, 255, 0.85))
+      drop-shadow(0 0 12px rgba(100, 220, 255, 0.7))
+      brightness(1);
+  }
+  50% {
+    filter:
+      drop-shadow(0 0 10px rgba(120, 255, 255, 1))
+      drop-shadow(0 0 18px rgba(120, 220, 255, 0.95))
+      drop-shadow(0 0 30px rgba(220, 255, 255, 0.65))
+      brightness(1.2);
+  }
+}
 
 /* На всякий случай: делаем другие контейнеры "сквозными", 
    если они вдруг налезают на мяч */
@@ -905,10 +944,14 @@
   left: 720px;
   top: 60px;
 }
+#node-personalReward {
+  left: 720px;
+  top: -60px;
+}
 
 /* Команда */
 #node-team {
-  left: 720px;
+  left: 600px;
   top: -60px;
   background: linear-gradient(135deg, #1a1a1a 0%, #2c3e50 100%);
   border: 2px solid #f1c40f;
@@ -976,9 +1019,13 @@
   left: 600px;
   top: 420px;
 }
+#node-specialReaction {
+  left: 600px;
+  top: 540px;
+}
 
 #node-goldBall {
-  left: 600px;
+  left: 720px;
   top: 540px;
 }
 
@@ -986,10 +1033,14 @@
   left: 720px;
   top: 420px;
 }
+#node-crystalBall {
+  left: 720px;
+  top: 660px;
+}
 
 #node-synergy {
-  left: 720px;
-  top: 540px;
+  left: 840px;
+  top: 660px;
 }
 
       /* Эффект при покупке */
@@ -1118,6 +1169,20 @@
   <b>ВСЕГО МОНЕТ:</b>
   <b id="res-coin-total" style="font-size: 1.8rem;">0</b>
 </div>
+<div class="res-title-coin" id="res-section-gem" style="display:none; color:#6ee7ff; border-bottom-color:#6ee7ff;">💎 Gem</div>
+
+<div class="summary-row" id="row-res-gem-ball" style="display:none;">
+  <span>💎 Кристальный мяч</span>
+  <span id="res-gem-ball">0</span>
+</div>
+<div class="summary-row" id="row-res-gem-personal" style="display:none;">
+  <span>🏅 Инд. награда</span>
+  <span id="res-gem-personal">0</span>
+</div>
+<div class="summary-row res-total-row" id="row-res-total-gem" style="display:none; color:#6ee7ff; border-top-color:#6ee7ff;">
+  <b>ВСЕГО GEM:</b>
+  <b id="res-gem-total" style="font-size: 1.8rem;">0</b>
+</div>
 
     <button onclick="closeSummary()" class="menu-btn">В МЕНЮ</button>
   </div>
@@ -1126,10 +1191,13 @@
 <div class="container">
   <div id="menu-screen" class="screen active">
     <div class="currency-bar">
-      <div class="xp-val">🔹 XP: <span id="total-xp">0</span></div>
-      <div class="coin-val">🟡 COINS: <span id="total-coins">0</span></div>
-    </div>
-    <div class="tree-viewport" id="tree"></div>
+  <div class="xp-val">🔹 XP: <span id="total-xp">0</span></div>
+  <div class="coin-val">🟡 COINS: <span id="total-coins">0</span></div>
+  <div class="gem-val">💎 GEM: <span id="total-gems">0</span></div>
+</div>
+    <div class="tree-viewport">
+  <div id="tree"></div>
+</div>
     <button
       style="
         background: #2ecc71;
@@ -1239,9 +1307,14 @@ function rollBallType() {
     const comboChance = [0, 1, 2, 3][data.lvls.synergy || 0] || 0;
     const fireChance = [0, 3, 6, 9][data.lvls.fireBall || 0] || 0;
     const goldChance = [0, 2, 4, 6][data.lvls.goldBall || 0] || 0;
+    const crystalChance = [0, 2, 4, 6][data.lvls.crystalBall || 0] || 0;
 
     if (data.lvls.synergy > 0 && Math.random() * 100 < comboChance) {
         return "combo";
+    }
+
+    if (data.lvls.crystalBall > 0 && Math.random() * 100 < crystalChance) {
+        return "crystal";
     }
 
     if (data.lvls.fireBall > 0 && Math.random() * 100 < fireChance) {
@@ -1258,7 +1331,7 @@ function applyBallType(ball, type) {
     if (!ball) return;
 
     ball.dataset.ballType = type;
-    ball.classList.remove("gold-ball", "fire-ball", "combo-ball");
+    ball.classList.remove("gold-ball", "fire-ball", "combo-ball", "crystal-ball");
 
     if (type === "gold") {
         ball.src = "match/golden_ball.png";
@@ -1271,6 +1344,10 @@ function applyBallType(ball, type) {
     else if (type === "combo") {
         ball.src = "match/combo_ball.png";
         ball.classList.add("combo-ball");
+    } 
+    else if (type === "crystal") {
+        ball.src = "match/crystal_ball.png";
+        ball.classList.add("crystal-ball");
     } 
     else {
         ball.src = "match/ball.png";
@@ -1285,9 +1362,13 @@ const ball = document.createElement("img");
 ball.src = "match/ball.png";
 ball.className = "extra-ball";
 ball.dataset.ballType = "normal";
+ball.dataset.spawnTime = "0";
+ball.dataset.lifeTime = "0";
+ball.style.display = "none";
 ball.style.setProperty("--angle", "0deg");
 ball.draggable = false;
 ball.onclick = handleKick;
+ball.dataset.ballIndex = "-1";
 
     ball.style.position = "absolute";
     ball.style.width = "120px";
@@ -1299,17 +1380,26 @@ ball.onclick = handleKick;
     field.appendChild(ball);
     return ball;
 }
+
+function getExtraBallLifeTime() {
+    return 750 + ((data.lvls.specialReaction || 0) * 250);
+}
+
+
 function updateMultiBalls() {
     const maxExtraBalls = data.lvls.multiBall || 0;
 
-    // создаём нужное максимальное количество один раз
     while (extraBalls.length < maxExtraBalls) {
         const newBall = createExtraBall();
-        if (newBall) extraBalls.push(newBall);
+        if (newBall) {
+            extraBalls.push(newBall);
+            currentExtraBallIndexes.push(-1);
+        }
     }
 
     while (extraBalls.length > maxExtraBalls) {
         const ball = extraBalls.pop();
+        currentExtraBallIndexes.pop();
         if (ball) ball.remove();
     }
 
@@ -1318,48 +1408,89 @@ function updateMultiBalls() {
 function moveAllBallsToRandomPositions() {
     const usedIndexes = [];
 
-    // Основной мяч: не в ту же клетку, где был
+    extraBalls.forEach(extraBall => {
+        if (extraBall.style.display === "block") {
+            const idx = parseInt(extraBall.dataset.ballIndex || "-1", 10);
+            if (idx !== -1 && !usedIndexes.includes(idx)) {
+                usedIndexes.push(idx);
+            }
+        }
+    });
+
     moveBallToRandomPosition(usedIndexes);
 
-    // Основной мяч пока обычный
     const mainBall = document.getElementById("ball");
     if (mainBall) {
         applyBallType(mainBall, "normal");
     }
+}
+function trySpawnExtraBall() {
+    const spawnChance = 0.10; // всегда 10%
 
-    currentExtraBallIndexes = [];
+    // Ищем первый скрытый доп. мяч
+    const hiddenBallIndex = extraBalls.findIndex(ball => ball.style.display !== "block");
+    if (hiddenBallIndex === -1) return;
 
-    extraBalls.forEach((ball) => {
-       const shouldShow = Math.random() < [0, 0.10, 0.15, 0.20][data.lvls.multiBall || 0];
+    if (Math.random() >= spawnChance) return;
 
-        if (!shouldShow) {
-            ball.style.display = "none";
-            currentExtraBallIndexes.push(-1);
-            return;
-        }
+    const ball = extraBalls[hiddenBallIndex];
+    if (!ball) return;
 
-        const newIndex = getRandomFreeBallIndex(usedIndexes);
-        if (newIndex === -1) {
-            ball.style.display = "none";
-            currentExtraBallIndexes.push(-1);
-            return;
-        }
+    const usedIndexes = [];
 
-        const pos = ballPositions[newIndex];
-        const ballType = rollBallType();
-
-        ball.style.display = "block";
-        ball.style.left = pos.left;
-        ball.style.top = pos.top;
-        ball.style.setProperty("--angle", "0deg");
-
-        applyBallType(ball, ballType);
-
-        usedIndexes.push(newIndex);
-        currentExtraBallIndexes.push(newIndex);
-    });
+if (currentMainBallIndex !== -1) {
+    usedIndexes.push(currentMainBallIndex);
 }
 
+extraBalls.forEach(extraBall => {
+    if (extraBall.style.display === "block") {
+        const idx = parseInt(extraBall.dataset.ballIndex || "-1", 10);
+        if (idx !== -1 && !usedIndexes.includes(idx)) {
+            usedIndexes.push(idx);
+        }
+    }
+});
+
+    const newIndex = getRandomFreeBallIndex(usedIndexes);
+    if (newIndex === -1) return;
+
+    const pos = ballPositions[newIndex];
+    const ballType = rollBallType();
+
+    ball.style.display = "block";
+    ball.style.left = pos.left;
+    ball.style.top = pos.top;
+    ball.style.setProperty("--angle", "0deg");
+
+    ball.dataset.spawnTime = Date.now().toString();
+    ball.dataset.lifeTime = getExtraBallLifeTime().toString();
+
+    applyBallType(ball, ballType);
+
+    currentExtraBallIndexes[hiddenBallIndex] = newIndex;
+    ball.dataset.ballIndex = newIndex.toString();
+}
+
+function updateExtraBallLife() {
+    const now = Date.now();
+
+    extraBalls.forEach((ball, index) => {
+        if (ball.style.display !== "block") return;
+
+        const spawnTime = parseInt(ball.dataset.spawnTime || "0", 10);
+        const lifeTime = parseInt(ball.dataset.lifeTime || "0", 10);
+
+        if (spawnTime <= 0 || lifeTime <= 0) return;
+
+        if (now - spawnTime >= lifeTime) {
+            ball.style.display = "none";
+            ball.dataset.spawnTime = "0";
+            ball.dataset.lifeTime = "0";
+            currentExtraBallIndexes[index] = -1;
+            ball.dataset.ballIndex = "-1";
+        }
+    });
+}
 
 // Функция смены кадров
 function playFriendFrame() {
@@ -1502,6 +1633,7 @@ loadViewerAtlas();
       let data = {
         xp: 0,
         coins: 0,
+        gems:0,
         lvls: {
           click: 1,
           friend: 0,
@@ -1532,7 +1664,10 @@ loadViewerAtlas();
           multiBall: 0,
           goldBall: 0,
           fireBall: 0,
+          specialReaction: 0,
+          crystalBall: 0,
           synergy: 0,
+          personalReward: 0,
           team: 0,
         },
         max: {
@@ -1565,7 +1700,10 @@ loadViewerAtlas();
           multiBall: 3,
           goldBall: 3,
           fireBall: 3,
+          specialReaction: 3,
+          crystalBall: 3,
           synergy: 3,
+          personalReward: 3,
           team: 1,
         },
         costs: {
@@ -1598,7 +1736,10 @@ loadViewerAtlas();
           multiBall: 300,
           goldBall: 50,
           fireBall: 600,
-          synergy: 100,
+          specialReaction: 150,
+          crystalBall: 200,
+          synergy: 300,
+          personalReward: 150,
           team: 10000,
         },
       };
@@ -1798,6 +1939,13 @@ loadViewerAtlas();
   desc: "На поле появляется больше мячей",
 },
 {
+  id: "node-specialReaction",
+  k: "specialReaction",
+  name: "ОСОБАЯ РЕАКЦИЯ",
+  cur: "xp",
+  desc: "Увеличивает время жизни только доп. мячей (+0.25с)",
+},
+{
   id: "node-goldBall",
   k: "goldBall",
   name: "ЗОЛОТОЙ МЯЧ",
@@ -1812,12 +1960,27 @@ loadViewerAtlas();
   desc: "Шанс, что каждый удар критический x3",
 },
 {
+  id: "node-crystalBall",
+  k: "crystalBall",
+  name: "КРИСТАЛЬНЫЙ МЯЧ",
+  cur: "coin",
+  desc: "Шанс, что каждый удар даёт 💎"
+  },
+{
   id: "node-synergy",
   k: "synergy",
   name: "СИНЕРГИЯ",
   cur: "coin",
-  desc: "Шанс на огненно-золотой мяч (x3 + 🟡)",
+  desc: "Шанс на огненно-золотой мяч (x3 + 🟡 + 💎)",
 },
+{
+  id: "node-personalReward",
+  k: "personalReward",
+  name: "ИНД. НАГРАДА",
+  cur: "coin",
+  desc: "Даёт 💎 за личный XP: 1500 / 1250 / 1000",
+},
+
 {
   id: "node-team",
   k: "team",
@@ -1941,14 +2104,14 @@ function initTree() {
 }
 
       function updateUI() {
-        document.getElementById("total-xp").innerText = Math.floor(data.xp);
-        document.getElementById("total-coins").innerText = Math.floor(
-          data.coins,
-        );
-        nodeData.forEach((n) => {
-          const el = document.getElementById(n.id);
-          const isMax = data.lvls[n.k] >= data.max[n.k];
-          let canSee = false;
+  document.getElementById("total-xp").innerText = Math.floor(data.xp);
+  document.getElementById("total-coins").innerText = Math.floor(data.coins);
+  document.getElementById("total-gems").innerText = Math.floor(data.gems || 0);
+
+  nodeData.forEach((n) => {
+    const el = document.getElementById(n.id);
+    const isMax = data.lvls[n.k] >= data.max[n.k];
+    let canSee = false;
 
           // ЛОГИКА ВИДИМОСТИ
 if (n.k === "click") canSee = true;
@@ -1985,8 +2148,11 @@ if (n.k === "timeCoin") canSee = data.lvls.delay >= 1;
 if (n.k === "reward" || n.k === "coach")
   canSee = data.lvls.footy >= 1;
 
-if (n.k === "bigReward" || n.k === "team")
+if (n.k === "bigReward" || n.k === "personalReward")
   canSee = data.lvls.reward >= 1;
+
+if (n.k === "team")
+  canSee = data.lvls.personalReward >= 1;
 
 // Нижняя ветка критов
 if (n.k === "cCoin") canSee = data.lvls.crit >= 1;
@@ -1997,30 +2163,52 @@ if (n.k === "midasCrit" || n.k === "midasSpeed")
   canSee = data.lvls.midas >= 1;
 
 // Новая ветка мячей
-if (n.k === "goldBall" || n.k === "fireBall")
+if (n.k === "specialReaction" || n.k === "fireBall")
   canSee = data.lvls.multiBall >= 1;
 
+if (n.k === "goldBall")
+  canSee = data.lvls.fireBall >= 1;
+
+if (n.k === "crystalBall")
+  canSee = data.lvls.goldBall >= 1;
+
 if (n.k === "synergy")
-  canSee = data.lvls.goldBall >= 1 && data.lvls.fireBall >= 1;
-          if (canSee) el.classList.add("visible");
-          el.classList.toggle("maxed", isMax);
-          document.getElementById(`lvl-${n.k}`).innerText = isMax
-            ? "MAX"
-            : `${data.lvls[n.k]}/${data.max[n.k]}`;
-          let icon = n.cur === "xp" ? "🔹" : "🟡";
-          document.getElementById(`c-${n.k}`).innerHTML = isMax
-            ? "✓"
-            : n.k === "team"
-              ? `🟡 10k<br>🔹100k`
-              : `${icon} ${data.costs[n.k]}`;
-          if (!isMax) {
-            let afford =
-              (n.cur === "xp" ? data.xp : data.coins) >= data.costs[n.k];
-            el.classList.toggle("disabled", !afford);
-          }
+  canSee = data.lvls.crystalBall >= 1;
+
+if (canSee) el.classList.add("visible");
+el.classList.toggle("maxed", isMax);
+document.getElementById(`lvl-${n.k}`).innerText = isMax
+  ? "MAX"
+  : `${data.lvls[n.k]}/${data.max[n.k]}`;
+
+let icon = n.cur === "xp" ? "🔹" : "🟡";
+document.getElementById(`c-${n.k}`).innerHTML = isMax
+  ? "✓"
+  : n.k === "team"
+    ? `🟡 10k<br>🔹100k`
+    : `${icon} ${data.costs[n.k]}`;
+
+if (!isMax) {
+  let afford =
+    (n.cur === "xp" ? data.xp : data.coins) >= data.costs[n.k];
+  el.classList.toggle("disabled", !afford);
+}
         });
         updateLiveStats();
       }
+
+      function centerTreeOnClickNode() {
+    const viewport = document.getElementById("tree-viewport");
+    const clickNode = document.getElementById("node-click");
+
+    if (!viewport || !clickNode) return;
+
+    const targetLeft = clickNode.offsetLeft - (viewport.clientWidth / 2) + (clickNode.offsetWidth / 2);
+    const targetTop = clickNode.offsetTop - (viewport.clientHeight / 2) + (clickNode.offsetHeight / 2);
+
+    viewport.scrollLeft = Math.max(0, targetLeft);
+    viewport.scrollTop = Math.max(0, targetTop);
+}
 
       function buy(type, cur) {
         // 1. Проверка на макс. уровень
@@ -2079,7 +2267,8 @@ if (n.k === "synergy")
 }
       }
 
-      let gInt, aInt, bInt, ballMoveInterval, curMs, totalEl, sCoins, sClick, sFriend, sFooty, xpForCoin, sBallXP, sBallCoins;
+      let gInt, aInt, bInt, ballMoveInterval, extraBallLifeInterval, extraBallSpawnInterval, curMs, totalEl,
+          sCoins, sGems, sClick, sFriend, sFooty, xpForCoin, personalXpForGem, sBallXP, sBallCoins, sBallGems, sPersonalRewardGems;
       let extraBalls = [];
       let currentMainBallIndex = -1;
       let currentExtraBallIndexes = [];
@@ -2087,7 +2276,7 @@ if (n.k === "synergy")
 function startGame() {
         if (data.lvls.friend > 0) {
         startFriend();}
-        sClick = sFriend = sFooty = sCoins = totalEl = xpForCoin = sBallXP = sBallCoins = 0;
+        sClick = sFriend = sFooty = sCoins = sGems = totalEl = xpForCoin = personalXpForGem = sBallXP = sBallCoins = sBallGems = sPersonalRewardGems = 0;
         let maxT = (11 + data.lvls.time) * 1000;
         curMs = maxT;
 
@@ -2112,6 +2301,15 @@ const ballStayTime = 750 + ((data.lvls.reaction || 0) * 250);
 ballMoveInterval = setInterval(() => {
     moveAllBallsToRandomPositions();
 }, ballStayTime);
+
+extraBallSpawnInterval = setInterval(() => {
+    trySpawnExtraBall();
+}, 300);
+
+extraBallLifeInterval = setInterval(() => {
+    updateExtraBallLife();
+}, 100);
+
 
         gInt = setInterval(() => {
           curMs -= 10;
@@ -2277,6 +2475,12 @@ if (ballType === "combo") {
   spawnFloatingText("+1", event.clientX + 65, event.clientY - 10, "coin");
 }
 
+// Кристальный мяч: +1 Gem
+if (ballType === "crystal") {
+  sGems += 1;
+  sBallGems += 1;
+  spawnFloatingText("+1 💎", event.clientX + 35, event.clientY - 35, "xp");
+}
   // 4. Проверка на "Затяжку времени"
   if (Math.random() * 100 < [0, 0.5, 1, 2][data.lvls.delay]) {
     curMs += 1000; 
@@ -2316,7 +2520,22 @@ if (ballType === "combo") {
       sCoins += bonus;
       xpForCoin += threshold;
       spawnFloatingText("+" + bonus, event.clientX - 40, event.clientY - 40, "coin");
+// 8. Индивидуальная награда: гемы только за личный XP
+  if (data.lvls.personalReward > 0) {
+  const gemThresholds = [0, 1500, 1250, 1000];
+  const threshold = gemThresholds[data.lvls.personalReward] || 0;
+
+  while (threshold > 0 && sClick >= personalXpForGem + threshold) {
+    sGems += 1;
+    sPersonalRewardGems += 1;
+    personalXpForGem += threshold;
+    spawnFloatingText("+1 💎", event.clientX - 20, event.clientY - 60, "xp");
+  }
+}
+
     }
+    
+    
   }
 }
 
@@ -2326,9 +2545,13 @@ if (ballType === "combo") {
     clearInterval(gInt);
     clearInterval(aInt);
     clearInterval(bInt);
+    clearInterval(extraBallSpawnInterval);
+    clearInterval(extraBallLifeInterval);
 
     extraBalls.forEach(ball => ball.remove());
     extraBalls = [];
+    currentExtraBallIndexes = [];
+    currentMainBallIndex = -1;
     // 2. Считаем людей (Зрители и Фанаты)
     let vC = (data.lvls.viewer || 0) + (data.lvls.vStand || 0) * 10;
     let fC = (data.lvls.fan || 0) + (data.lvls.fSec || 0) * 10;
@@ -2370,6 +2593,7 @@ document.getElementById('friend-animation').style.display = 'none';
     // 6. Итоговые расчеты
     let totalXP = Math.floor(sClick + sFriend + sFooty);
     let totalMatchCoins = sCoins + cBase + cExtra + luckMoney;
+    let totalMatchGems = sGems;
 
     // 7. Вывод данных в UI (Безопасно проверяем наличие элементов)
     const setVal = (id, val) => {
@@ -2403,14 +2627,18 @@ document.getElementById('friend-animation').style.display = 'none';
     setVal("res-coin-luck", (sCoins + luckMoney));
     setVal("res-coin-ball", Math.floor(sBallCoins));
     
-    // Бонусы по отдельности (те самые строки, что вызывали ошибку)
+    // Бонусы по отдельности 
     setVal("res-coin-drink", drinkMoney);
     setVal("res-coin-attr", attrMoney);
-
+    // Гемы
+    setVal("res-gem-ball", Math.floor(sBallGems));
+    setVal("res-gem-personal", Math.floor(sPersonalRewardGems));
+    setVal("res-gem-total", Math.floor(totalMatchGems));
     // 8. Сохранение прогресса
-    data.xp += totalXP;
-    data.coins += totalMatchCoins;
-
+ data.xp += totalXP;
+data.coins += totalMatchCoins;
+data.gems += totalMatchGems;
+updateUI();
     // --- ЛОГИКА ДИНАМИЧЕСКОГО ОКНА ---
 
     // 1. Показываем Билеты, если куплены Зрители или Трибуны
@@ -2438,6 +2666,21 @@ document.getElementById('friend-animation').style.display = 'none';
     if (data.lvls.attr > 0) {
         document.getElementById("row-res-attr").style.display = "flex";
     }
+    // 5. Показываем Гемы, если заработано больше 0
+    // 5. Показываем Гемы, если заработано больше 0
+if (totalMatchGems > 0) {
+    document.getElementById("res-section-gem").style.display = "block";
+
+    if (sBallGems > 0) {
+        document.getElementById("row-res-gem-ball").style.display = "flex";
+    }
+
+    if (sPersonalRewardGems > 0) {
+        document.getElementById("row-res-gem-personal").style.display = "flex";
+    }
+
+    document.getElementById("row-res-total-gem").style.display = "flex";
+}
 
     // 5. Показываем Итоговую строку монет, если доход больше 0
     if (totalMatchCoins > 0) {
@@ -2455,17 +2698,21 @@ document.getElementById('friend-animation').style.display = 'none';
     
     
     // Сбрасываем видимость всех динамических строк
-    const idsToHide = [
-    "res-section-coin",
-    "row-res-base",
-    "row-res-luck",
-    "row-res-ball-coin",
-    "row-res-drink",
-    "row-res-attr",
-    "row-res-total-coin",
-    "row-res-ball-xp",
-    "row-res-friend-xp",
-    "row-res-footy-xp"
+   const idsToHide = [
+  "res-section-coin",
+  "row-res-base",
+  "row-res-luck",
+  "row-res-ball-coin",
+  "row-res-drink",
+  "row-res-attr",
+  "row-res-total-coin",
+  "row-res-ball-xp",
+  "row-res-friend-xp",
+  "row-res-footy-xp",
+  "res-section-gem",
+  "row-res-gem-ball",
+  "row-res-gem-personal",
+  "row-res-total-gem"
 ];
     idsToHide.forEach(id => {
         let el = document.getElementById(id);
@@ -2516,6 +2763,7 @@ document.getElementById('friend-animation').style.display = 'none';
       initTree();
       updateUI();
       renderPlayerPreview();
+      setTimeout(centerTreeOnClickNode, 50);
     </script>
   </body>
 </html>
