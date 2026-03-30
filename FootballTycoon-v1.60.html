@@ -1158,8 +1158,9 @@
  <div class="summary-card">
   <h2 style="color:#2ecc71; margin-top:0;">МАТЧ ЗАВЕРШЕН</h2>
 
-  <div class="summary-row" style="border:none; justify-content:center; font-size: 1rem; margin-bottom: 20px;">
-    <span>⏱ Время: <b id="res-time">0s</b></span>
+  <div class="summary-row" style="border:none; justify-content:center; gap: 30px; font-size: 1rem; margin-bottom: 20px;">
+  <span>⏱ Время: <b id="res-time">0s</b></span>
+  <span id="row-res-visitors" style="display:none;">👥 Посетители: <b id="res-visitors">0</b></span>
   </div>
 
   <div class="summary-columns">
@@ -1182,10 +1183,15 @@
         <span id="res-xp-footy">0</span>
       </div>
 
-      <div class="summary-row" id="row-res-ball-xp" style="display:none;">
-        <span>⚽ Спец-мячи</span>
-        <span id="res-xp-ball">0</span>
-      </div>
+      <div class="summary-row" id="row-res-fire-xp" style="display:none;">
+  <span>🔥 Огненный мяч</span>
+  <span id="res-xp-fire">0</span>
+</div>
+
+<div class="summary-row" id="row-res-combo-xp" style="display:none;">
+  <span>⚡ Комбо-мяч</span>
+  <span id="res-xp-combo">0</span>
+</div>
 
       <div class="summary-row res-total-row" style="color: #3498db; border-top-color: #3498db;">
         <b>ВСЕГО XP:</b>
@@ -1215,10 +1221,15 @@
   <span id="res-coin-reward">0</span>
 </div>
 
-      <div class="summary-row" id="row-res-ball-coin" style="display:none;">
-        <span>⚽ Спец-мячи</span>
-        <span id="res-coin-ball">0</span>
-      </div>
+     <div class="summary-row" id="row-res-gold-coin" style="display:none;">
+  <span>💰 Золотой мяч</span>
+  <span id="res-coin-gold">0</span>
+</div>
+
+<div class="summary-row" id="row-res-combo-coin" style="display:none;">
+  <span>⚡ Комбо-мяч</span>
+  <span id="res-coin-combo">0</span>
+</div>
 
       <div class="summary-row" id="row-res-drink" style="display:none;">
         <span>🥤 Напитки</span>
@@ -1240,10 +1251,15 @@
     <div class="summary-col" id="summary-gem-col" style="display:none;">
       <div class="res-title-gem" id="res-section-gem">💎 Gem</div>
 
-      <div class="summary-row" id="row-res-gem-ball" style="display:none;">
-        <span>💎 Кристальный мяч</span>
-        <span id="res-gem-ball">0</span>
-      </div>
+      <div class="summary-row" id="row-res-gem-crystal" style="display:none;">
+  <span>💎 Кристальный мяч</span>
+  <span id="res-gem-crystal">0</span>
+</div>
+
+<div class="summary-row" id="row-res-gem-combo" style="display:none;">
+  <span>⚡ Комбо-мяч</span>
+  <span id="res-gem-combo">0</span>
+</div>
 
       <div class="summary-row" id="row-res-gem-personal" style="display:none;">
         <span>🏅 Инд. награда</span>
@@ -1302,9 +1318,11 @@
     </div>
 
     <div class="top-stat-box">
-      <div class="top-stat-line">ОЖИДАЕМЫЙ ДОХОД:</div>
-      <div class="top-stat-line"><b id="top-stat-income">0</b> 🟡 / МАТЧ</div>
-    </div>
+  <div class="top-stat-line">ОЖИДАЕМО ЛЮДЕЙ:</div>
+  <div class="top-stat-line"><b id="top-stat-people">0</b> 👥</div>
+  <div class="top-stat-line">ОЖИДАЕМЫЙ ДОХОД:</div>
+  <div class="top-stat-line"><b id="top-stat-income">0</b> 🟡</div>
+</div>
   </div>
 </div>
   <div id="game-screen" class="screen"> 
@@ -2007,7 +2025,7 @@ loadViewerAtlas();
           k: "attr",
           name: "АТРИБУТИКА",
           cur: "coin",
-          desc: "Шанс 30/60/90%, что каждый фанат купит шарф (+2🟡)",
+          desc: "Шанс 10/20/30%, что каждый фанат купит шарф (+3🟡)",
         },
         {
           id: "node-reward",
@@ -2383,7 +2401,10 @@ if (!isMax) {
       }
 
     let gInt, aInt, bInt, ballMoveInterval, extraBallLifeInterval, extraBallSpawnInterval, curMs, totalEl,
-    sCoins, sGems, sClick, sFriend, sFooty, xpForCoin, personalXpForGem, sBallXP, sBallCoins, sBallGems, sPersonalRewardGems, sRewardCoins, sMidasCoins, sVipGems, actualViewerCount;
+    sCoins, sGems, sClick, sFriend, sFooty, xpForCoin, personalXpForGem,
+    sBallXP, sBallCoins, sBallGems,
+    sFireXP, sComboXP, sGoldCoins, sComboCoins, sCrystalGems, sComboGems,
+    sPersonalRewardGems, sRewardCoins, sMidasCoins, sVipGems, actualViewerCount;
       let extraBalls = [];
       let currentMainBallIndex = -1;
       let currentExtraBallIndexes = [];
@@ -2391,8 +2412,10 @@ if (!isMax) {
 function startGame() {
         if (data.lvls.friend > 0) {
         startFriend();}
-        sClick = sFriend = sFooty = sCoins = sGems = totalEl = xpForCoin = personalXpForGem = sBallXP = 
-        sBallCoins = sBallGems = sPersonalRewardGems = sRewardCoins = sMidasCoins = sVipGems = actualViewerCount = 0;
+        sClick = sFriend = sFooty = sCoins = sGems = totalEl = xpForCoin = personalXpForGem =
+        sBallXP = sBallCoins = sBallGems =
+        sFireXP = sComboXP = sGoldCoins = sComboCoins = sCrystalGems = sComboGems =
+        sPersonalRewardGems = sRewardCoins = sMidasCoins = sVipGems = actualViewerCount = 0;
         let maxT = (11 + data.lvls.time) * 1000;
         curMs = maxT;
 
@@ -2573,6 +2596,7 @@ const ballType = clickedBall?.dataset?.ballType || "normal";
 if (ballType === "gold") {
   sCoins += 1;
   sBallCoins += 1;
+  sGoldCoins += 1;
   spawnFloatingText("+1", event.clientX + 35, event.clientY - 35, "coin");
 }
 
@@ -2580,7 +2604,9 @@ if (ballType === "gold") {
 if (ballType === "fire") {
   const oldP = p;
   p *= 3;
-  sBallXP += (p - oldP);
+  const bonusXP = p - oldP;
+  sBallXP += bonusXP;
+  sFireXP += bonusXP;
   if (isCrit) isSuperCrit = true;
   spawnFloatingText("FIRE!", event.clientX + 35, event.clientY - 35, "crit");
 }
@@ -2590,14 +2616,18 @@ if (ballType === "fire") {
 if (ballType === "combo") {
   const oldP = p;
   p *= 3;
-  sBallXP += (p - oldP);
+  const bonusXP = p - oldP;
+  sBallXP += bonusXP;
+  sComboXP += bonusXP;
   if (isCrit) isSuperCrit = true;
 
   sCoins += 1;
   sBallCoins += 1;
+  sComboCoins += 1;
 
   sGems += 1;
   sBallGems += 1;
+  sComboGems += 1;
 
   spawnFloatingText("COMBO!", event.clientX + 35, event.clientY - 35, "crit");
   spawnFloatingText("+1", event.clientX + 65, event.clientY - 10, "coin");
@@ -2608,6 +2638,7 @@ if (ballType === "combo") {
 if (ballType === "crystal") {
   sGems += 1;
   sBallGems += 1;
+  sCrystalGems += 1;
   spawnFloatingText("+1 💎", event.clientX + 35, event.clientY - 35, "xp");
 }
   // 4. Проверка на "Затяжку времени"
@@ -2733,7 +2764,7 @@ document.getElementById('friend-animation').style.display = 'none';
     let cExtra = drinkMoney + attrMoney;
 
     // 6. Итоговые расчеты
-    let totalXP = Math.floor(sClick + sFriend + sFooty);
+    let totalXP = Math.floor(sClick + sFriend + sFooty + sBallXP);
     let totalMatchCoins = sCoins + cBase + cExtra + luckMoney;
     let totalMatchGems = sGems;
 
@@ -2744,16 +2775,21 @@ document.getElementById('friend-animation').style.display = 'none';
     };
 
     setVal("res-time", (totalEl / 1000).toFixed(1) + "s");
+    setVal("res-visitors", totalPeople);
     
     // XP
     setVal("res-xp-total", totalXP);
     setVal("res-xp-click", Math.floor(sClick));
     setVal("res-xp-friend", Math.floor(sFriend));
     setVal("res-xp-footy", Math.floor(sFooty));
-    setVal("res-xp-ball", Math.floor(sBallXP));
+    setVal("res-xp-fire", Math.floor(sFireXP));
+    setVal("res-xp-combo", Math.floor(sComboXP));
 
-    if (sBallXP > 0) {
-    document.getElementById("row-res-ball-xp").style.display = "flex";
+    if (sFireXP > 0) {
+    document.getElementById("row-res-fire-xp").style.display = "flex";
+}
+    if (sComboXP > 0) {
+    document.getElementById("row-res-combo-xp").style.display = "flex";
 }
 
     if (data.lvls.friend > 0) {
@@ -2769,13 +2805,15 @@ document.getElementById('friend-animation').style.display = 'none';
    setVal("res-coin-luck", luckMoney);
    setVal("res-coin-midas", Math.floor(sMidasCoins));
    setVal("res-coin-reward", Math.floor(sRewardCoins));
-   setVal("res-coin-ball", Math.floor(sBallCoins));
+   setVal("res-coin-gold", Math.floor(sGoldCoins));
+   setVal("res-coin-combo", Math.floor(sComboCoins));
     
     // Бонусы по отдельности 
     setVal("res-coin-drink", drinkMoney);
     setVal("res-coin-attr", attrMoney);
     // Гемы
-    setVal("res-gem-ball", Math.floor(sBallGems));
+    setVal("res-gem-crystal", Math.floor(sCrystalGems));
+    setVal("res-gem-combo", Math.floor(sComboGems));
     setVal("res-gem-vip", Math.floor(sVipGems));
     setVal("res-gem-personal", Math.floor(sPersonalRewardGems));
     setVal("res-gem-total", Math.floor(totalMatchGems));
@@ -2787,9 +2825,10 @@ updateUI();
     // --- ЛОГИКА ДИНАМИЧЕСКОГО ОКНА ---
 
     // 1. Показываем Билеты, если куплены Зрители или Трибуны
-    if (data.lvls.viewer > 0 || data.lvls.vStand > 0 || data.lvls.fan > 0) {
+   if (data.lvls.viewer > 0 || data.lvls.vStand > 0 || data.lvls.fan > 0) {
     document.getElementById("summary-coin-col").style.display = "block";
     document.getElementById("row-res-base").style.display = "flex";
+    document.getElementById("row-res-visitors").style.display = "inline";
 }
 
    if (luckMoney > 0) {
@@ -2804,9 +2843,13 @@ if (sRewardCoins > 0) {
     document.getElementById("summary-coin-col").style.display = "block";
     document.getElementById("row-res-reward").style.display = "flex";
 }
-   if (sBallCoins > 0) {
+   if (sGoldCoins > 0) {
     document.getElementById("summary-coin-col").style.display = "block";
-    document.getElementById("row-res-ball-coin").style.display = "flex";
+    document.getElementById("row-res-gold-coin").style.display = "flex";
+}
+   if (sComboCoins > 0) {
+    document.getElementById("summary-coin-col").style.display = "block";
+    document.getElementById("row-res-combo-coin").style.display = "flex";
 }
 
     // 3. Показываем Напитки
@@ -2823,8 +2866,12 @@ if (sRewardCoins > 0) {
 if (totalMatchGems > 0) {
     document.getElementById("summary-gem-col").style.display = "block";
 
-    if (sBallGems > 0) {
-        document.getElementById("row-res-gem-ball").style.display = "flex";
+    if (sCrystalGems > 0) {
+        document.getElementById("row-res-gem-crystal").style.display = "flex";
+    }
+
+    if (sComboGems > 0) {
+        document.getElementById("row-res-gem-combo").style.display = "flex";
     }
 
     if (sVipGems > 0) {
@@ -2858,19 +2905,24 @@ if (totalMatchGems > 0) {
   "summary-gem-col",
   "row-res-base",
   "row-res-luck",
-  "row-res-ball-coin",
   "row-res-drink",
   "row-res-attr",
   "row-res-total-coin",
-  "row-res-ball-xp",
   "row-res-friend-xp",
   "row-res-footy-xp",
-  "row-res-gem-ball",
   "row-res-gem-personal",
   "row-res-total-gem",
   "row-res-gem-vip",
   "row-res-reward",
-  "row-res-midas"
+  "row-res-midas",
+  "row-res-fire-xp",
+  "row-res-combo-xp",
+  "row-res-gold-coin",
+  "row-res-combo-coin",
+  "row-res-gem-crystal",
+  "row-res-gem-combo",
+  "row-res-visitors",
+  
   
 ];
     idsToHide.forEach(id => {
@@ -2925,27 +2977,40 @@ if (totalMatchGems > 0) {
     );
 }
 
-    function updateLiveStats() {
+function getExpectedPeople() {
+    const viewerCapacity = (data.lvls.viewer || 0) + (data.lvls.vStand || 0) * 10;
+    const viewerChance = 30 + ([0, 10, 20, 30][data.lvls.adCampaign || 0] || 0);
 
+    const expectedViewers = viewerCapacity * (viewerChance / 100);
+    const fans = (data.lvls.fan || 0) + (data.lvls.fSec || 0) * 10;
+
+    return Math.round(fans + expectedViewers);
+}
+
+    function updateLiveStats() {
     const coachBonusTotal = (data.lvls.footy || 0) * ((data.lvls.coach || 0) * 2);
-    const eBonuses = [0, 2, 5, 10]; 
+
+    const eBonuses = [0, 2, 5, 10];
     const damageVal = data.lvls.click + (eBonuses[data.lvls.equip] || 0);
     const teamVal = (data.lvls.friend * 1) + (data.lvls.footy * 5) + coachBonusTotal;
     const critVal = (data.lvls.crit * 3) + "%";
     const delayVal = [0, 0.5, 1, 2][data.lvls.delay] + "%";
+    const peopleVal = "~" + getExpectedPeople();
     const incomeVal = "~" + getExpectedIncome();
 
     const a = document.getElementById("top-stat-damage");
     const b = document.getElementById("top-stat-team");
     const c = document.getElementById("top-stat-crit");
     const d = document.getElementById("top-stat-delay");
-    const e = document.getElementById("top-stat-income");
+    const e = document.getElementById("top-stat-people");
+    const f = document.getElementById("top-stat-income");
 
     if (a) a.innerText = damageVal;
     if (b) b.innerText = teamVal;
     if (c) c.innerText = critVal;
     if (d) d.innerText = delayVal;
-    if (e) e.innerText = incomeVal;
+    if (e) e.innerText = peopleVal;
+    if (f) f.innerText = incomeVal;
 }
 
       initTree();
