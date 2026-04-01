@@ -945,6 +945,15 @@
             drop-shadow(0 0 30px rgba(220, 255, 255, 0.65)) brightness(1.2);
         }
       }
+
+.tele-hit {
+  filter:
+    drop-shadow(0 0 8px rgba(120, 220, 255, 0.95))
+    drop-shadow(0 0 16px rgba(80, 180, 255, 0.8))
+    drop-shadow(0 0 28px rgba(180, 255, 255, 0.55));
+}
+
+
       #piggy {
   position: absolute;
   width: 100px;
@@ -1242,6 +1251,10 @@
       }
       #node-reflex {
         left: 840px;
+        top: 300px;
+      }
+      #node-telekinesis {
+        left: 960px;
         top: 300px;
       }
 
@@ -2473,6 +2486,14 @@ else if (type === "midas") {
   el.style.fontSize = "1.8rem";
   el.style.textShadow = "0 0 10px #ffd700";
 }
+else if (type === "tele") {
+  el.className = "floating-xp";
+  el.innerHTML = text;
+  el.style.color = "#7ddfff";
+  el.style.fontSize = "1.2rem";
+  el.style.fontWeight = "bold";
+  el.style.textShadow = "0 0 8px #7ddfff, 0 0 16px #3aa7ff";
+}
   // Время
   else if (type === "time") {
     el.className = "floating-xp";
@@ -2541,6 +2562,7 @@ else if (type === "midas") {
           crystalTime: 0,
           vip: 0,
           reflex: 0,
+          telekinesis: 0,
           competition: 0,
         },
         max: {
@@ -2582,6 +2604,7 @@ else if (type === "midas") {
           crystalTime: 3,
           vip: 3,
           reflex: 5,
+          telekinesis: 3,
           competition: 1,
         },
 
@@ -2624,6 +2647,7 @@ else if (type === "midas") {
           crystalTime: 100,
           vip: 150,
           reflex: 1000,
+          telekinesis: 1000,
           competition: 10000,
         },
       };
@@ -2894,6 +2918,13 @@ else if (type === "midas") {
           desc: "Автоклик с интервалом 0.30 / 0.25 / 0.20 / 0.15 / 0.10 секунды",
         },
         {
+          id: "node-telekinesis",
+          k: "telekinesis",
+          name: "ТЕЛЕКИНЕЗ",
+          cur: "xp",
+          desc: "10%,20%,30% шанс, ударить по соседнему объекту при ударе.",
+        },
+        {
           id: "node-personalReward",
           k: "personalReward",
           name: "ИНД. НАГРАДА",
@@ -3079,9 +3110,8 @@ else if (type === "midas") {
           if (n.k === "reward" || n.k === "coach")
             canSee = data.lvls.footy >= 1;
 
-          if (n.k === "bigReward" || n.k === "personalReward")
-            canSee = data.lvls.reward >= 1;
-
+          if (n.k === "bigReward" || n.k === "personalReward") canSee = data.lvls.reward >= 1;
+          if (n.k === "telekinesis") canSee = data.lvls.reflex >= 1;
           if (n.k === "competition") canSee = data.lvls.personalReward >= 1;
 
           // Нижняя ветка критов
@@ -3249,6 +3279,40 @@ let surprisePiggyState = {
 function getReflexInterval() {
   return [0, 300, 250, 200, 150, 100][data.lvls.reflex || 0] || 0;
 }
+function getTelekinesisChance() {
+  return [0, 10, 20, 30][data.lvls.telekinesis || 0] || 0;
+}
+function getTelekinesisTargets(excludedElement = null) {
+  const targets = [];
+
+  const mainBall = document.getElementById("ball");
+  if (mainBall && excludedElement !== mainBall) {
+    targets.push(mainBall);
+  }
+
+  extraBalls.forEach((ball) => {
+    if (ball && ball.style.display === "block" && excludedElement !== ball) {
+      targets.push(ball);
+    }
+  });
+
+  const piggy = document.getElementById("piggy");
+  if (piggyState.active && piggy && piggy.style.display !== "none" && excludedElement !== piggy) {
+    targets.push(piggy);
+  }
+
+  const surprisePiggy = document.getElementById("surprise-piggy");
+  if (
+    surprisePiggyState.active &&
+    surprisePiggy &&
+    surprisePiggy.style.display !== "none" &&
+    excludedElement !== surprisePiggy
+  ) {
+    targets.push(surprisePiggy);
+  }
+
+  return targets;
+}
 
 function getAutoClickTarget() {
   if (!mouseX && !mouseY) return null;
@@ -3267,6 +3331,321 @@ function getAutoClickTarget() {
 
   return null;
 }
+ function applyTelekinesis(sourceElement, sourceEvent) {
+  if ((data.lvls.telekinesis || 0) <= 0) return;
+
+  const chance = getTelekinesisChance();
+  if (Math.random() * 100 >= chance) return;
+
+  const targets = getTelekinesisTargets(sourceElement);
+  if (targets.length === 0) return;
+
+  const target = targets[Math.floor(Math.random() * targets.length)];
+  if (!target) return;
+
+  const targetPos = getElementCenter(target);
+  if (!targetPos) return;
+
+  playTelekinesisImpact(target);
+
+  const equipBonuses = [0, 2, 5, 10];
+  let p = data.lvls.click + (equipBonuses[data.lvls.equip] || 0);
+
+  spawnFloatingText(
+    "TELE HIT",
+    targetPos.x,
+    targetPos.y - 25,
+    "tele"
+  );
+
+  if (target.id === "piggy" && piggyState.active) {
+    piggyState.hp -= p;
+
+    if (piggyState.hp <= 0) {
+      sCoins += piggyState.reward;
+      sPiggyCoins += piggyState.reward;
+
+      spawnFloatingText(
+        "PIGGY BROKEN!",
+        targetPos.x,
+        targetPos.y - 5,
+        "crit"
+      );
+
+      setTimeout(() => {
+        spawnFloatingText(
+          "🟡 +" + piggyState.reward,
+          targetPos.x + 20,
+          targetPos.y + 20,
+          "piggyCoin"
+        );
+      }, 120);
+
+      target.style.display = "none";
+
+      piggyState.active = false;
+      piggyState.hp = 0;
+      piggyState.maxHp = 0;
+      piggyState.reward = 0;
+      piggyState.spawnTime = 0;
+      piggyState.lifeTime = 0;
+
+      updatePiggySprite();
+      updatePiggyHpBar();
+    } else {
+      updatePiggySprite();
+      updatePiggyHpBar();
+
+      spawnFloatingText(
+        "-" + p,
+        targetPos.x + 10,
+        targetPos.y + 5,
+        "xp"
+      );
+    }
+
+    const scoreEl = document.getElementById("current-score");
+    const coinsEl = document.getElementById("game-coins");
+    let totalNow = sClick + sFriend + sFooty;
+
+    if (scoreEl) scoreEl.innerText = Math.floor(totalNow);
+    if (coinsEl) coinsEl.innerText = `🟡 ${Math.floor(sCoins)}`;
+
+    return;
+  }
+
+  if (target.id === "surprise-piggy" && surprisePiggyState.active) {
+    surprisePiggyState.hp -= p;
+
+    if (surprisePiggyState.hp <= 0) {
+      sCoins += surprisePiggyState.coinReward;
+      sGems += surprisePiggyState.gemReward;
+
+      sPiggyCoins += surprisePiggyState.coinReward;
+      sPiggyGems += surprisePiggyState.gemReward;
+
+      spawnFloatingText(
+        "SURPRISE!",
+        targetPos.x,
+        targetPos.y - 5,
+        "tele"
+      );
+
+      setTimeout(() => {
+        spawnFloatingText(
+          "🟡 +" + surprisePiggyState.coinReward,
+          targetPos.x + 20,
+          targetPos.y + 18,
+          "piggyCoin"
+        );
+      }, 120);
+
+      setTimeout(() => {
+        spawnFloatingText(
+          "💎 +" + surprisePiggyState.gemReward,
+          targetPos.x + 35,
+          targetPos.y + 38,
+          "piggyGem"
+        );
+      }, 220);
+
+      target.style.display = "none";
+
+      surprisePiggyState.active = false;
+      surprisePiggyState.hp = 0;
+      surprisePiggyState.maxHp = 0;
+      surprisePiggyState.coinReward = 0;
+      surprisePiggyState.gemReward = 0;
+      surprisePiggyState.spawnTime = 0;
+      surprisePiggyState.lifeTime = 0;
+
+      updateSurprisePiggySprite();
+      updateSurprisePiggyHpBar();
+    } else {
+      updateSurprisePiggySprite();
+      updateSurprisePiggyHpBar();
+
+      spawnFloatingText(
+        "-" + p,
+        targetPos.x + 10,
+        targetPos.y + 5,
+        "xp"
+      );
+    }
+
+    const scoreEl = document.getElementById("current-score");
+    const coinsEl = document.getElementById("game-coins");
+    let totalNow = sClick + sFriend + sFooty;
+
+    if (scoreEl) scoreEl.innerText = Math.floor(totalNow);
+    if (coinsEl) coinsEl.innerText = `🟡 ${Math.floor(sCoins)}`;
+
+    return;
+  }
+
+  const ballType = target?.dataset?.ballType || "normal";
+
+  if (ballType === "gold") {
+    sClick += p;
+
+    let amount = 1;
+    sCoins += amount;
+    sBallCoins += amount;
+    sGoldCoins += amount;
+
+    spawnFloatingText(
+      "+" + p,
+      targetPos.x + 10,
+      targetPos.y + 5,
+      "xp"
+    );
+    spawnFloatingText(
+      "+" + amount,
+      targetPos.x + 28,
+      targetPos.y - 6,
+      "coin"
+    );
+    return;
+  }
+
+  if (ballType === "fire") {
+    const oldP = p;
+    p *= 3;
+    const bonusXP = p - oldP;
+
+    sClick += p;
+    sBallXP += bonusXP;
+    sFireXP += bonusXP;
+
+    spawnFloatingText(
+      "+" + p,
+      targetPos.x + 10,
+      targetPos.y + 5,
+      "xp"
+    );
+    return;
+  }
+
+  if (ballType === "combo") {
+    const oldP = p;
+    p *= 3;
+    const bonusXP = p - oldP;
+
+    sClick += p;
+    sBallXP += bonusXP;
+    sComboXP += bonusXP;
+
+    let amount = 1;
+    sCoins += amount;
+    sBallCoins += amount;
+    sComboCoins += amount;
+
+    sGems += amount;
+    sBallGems += amount;
+    sComboGems += amount;
+
+    spawnFloatingText(
+      "+" + p,
+      targetPos.x + 10,
+      targetPos.y + 5,
+      "xp"
+    );
+    spawnFloatingText(
+      "+" + amount,
+      targetPos.x + 28,
+      targetPos.y - 6,
+      "coin"
+    );
+    spawnFloatingText(
+      "+" + amount + " 💎",
+      targetPos.x + 40,
+      targetPos.y + 14,
+      "xp"
+    );
+    return;
+  }
+
+  if (ballType === "crystal") {
+    sClick += p;
+
+    let amount = 1;
+    sGems += amount;
+    sBallGems += amount;
+    sCrystalGems += amount;
+
+    spawnFloatingText(
+      "+" + p,
+      targetPos.x + 10,
+      targetPos.y + 5,
+      "xp"
+    );
+    spawnFloatingText(
+      "+" + amount + " 💎",
+      targetPos.x + 28,
+      targetPos.y - 6,
+      "xp"
+    );
+    return;
+  }
+
+  sClick += p;
+
+  spawnFloatingText(
+    "+" + p,
+    targetPos.x + 10,
+    targetPos.y + 5,
+    "xp"
+  );
+}
+function playTelekinesisImpact(target) {
+  if (!target) return;
+
+  const randomDeg = Math.floor(Math.random() * 360) - 180;
+  target.style.setProperty("--angle", randomDeg + "deg");
+
+  target.classList.add("tele-hit");
+
+  if (target.id === "ball") {
+    target.style.transform = `rotate(var(--angle, 0deg)) scale(0.92)`;
+    setTimeout(() => {
+      target.style.transform = `rotate(var(--angle, 0deg)) scale(1)`;
+      target.classList.remove("tele-hit");
+    }, 120);
+    return;
+  }
+
+  if (target.classList.contains("extra-ball")) {
+    target.style.transform = `translate(-50%, -50%) rotate(var(--angle, 0deg)) scale(0.92)`;
+    setTimeout(() => {
+      target.style.transform = `translate(-50%, -50%) rotate(var(--angle, 0deg)) scale(1)`;
+      target.classList.remove("tele-hit");
+    }, 120);
+    return;
+  }
+
+  if (target.id === "piggy" || target.id === "surprise-piggy") {
+    target.style.transform = "translate(-50%, -50%) scale(0.92)";
+    setTimeout(() => {
+      target.style.transform = "translate(-50%, -50%) scale(1)";
+      target.classList.remove("tele-hit");
+    }, 120);
+    return;
+  }
+
+  setTimeout(() => {
+    target.classList.remove("tele-hit");
+  }, 120);
+}
+function getElementCenter(el) {
+  if (!el) return null;
+
+  const rect = el.getBoundingClientRect();
+  return {
+    x: rect.left + rect.width / 2,
+    y: rect.top + rect.height / 2,
+  };
+}
+
 
 function startReflex() {
   const interval = getReflexInterval();
@@ -3553,6 +3932,8 @@ function handleKick(event) {
     if (scoreEl) scoreEl.innerText = Math.floor(totalNow);
     if (coinsEl) coinsEl.innerText = `🟡 ${Math.floor(sCoins)}`;
 
+    applyTelekinesis(clickedBall, event);
+
     return;
   }
 
@@ -3627,6 +4008,7 @@ function handleKick(event) {
     if (scoreEl) scoreEl.innerText = Math.floor(totalNow);
     if (coinsEl) coinsEl.innerText = `🟡 ${Math.floor(sCoins)}`;
 
+    applyTelekinesis(clickedBall, event);
     return;
   }
 
@@ -3760,7 +4142,7 @@ function handleKick(event) {
     }
   }
 
-  if (Math.random() * 100 < [0, 0.5, 1, 2][data.lvls.delay]) {
+  if (Math.random() * 100 < [0, 50, 60, 70][data.lvls.delay]) {
     curMs += 1000;
 
     spawnFloatingText("+1", event.clientX + 20, event.clientY + 40, "time");
@@ -3843,7 +4225,7 @@ function handleKick(event) {
     }
   }
 
-  if (data.lvls.personalReward > 0) {
+    if (data.lvls.personalReward > 0) {
     const gemThresholds = [0, 1500, 1250, 1000];
     const threshold = gemThresholds[data.lvls.personalReward] || 0;
 
@@ -3860,6 +4242,8 @@ function handleKick(event) {
       );
     }
   }
+
+  applyTelekinesis(clickedBall, event);
 }
       function stopGame() {
         // 1. Остановка таймеров
