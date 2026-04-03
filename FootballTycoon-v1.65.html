@@ -1057,59 +1057,59 @@
         /* === ЦЕНТР === */
       }
       #node-click {
-        left: 480px;
+        left: 380px;
         top: 300px;
         border: 3px solid #fff;
       }
 
       /* === ЛЕВАЯ ВЕТКА (БЕЗ ИЗМЕНЕНИЙ) === */
       #node-friend {
-        left: 360px;
+        left: 260px;
         top: 300px;
       }
       #node-fCrit {
-        left: 360px;
+        left: 260px;
         top: 420px;
       }
       #node-fCoin {
-        left: 360px;
+        left: 260px;
         top: 540px;
       }
 
       #node-viewer {
-        left: 240px;
+        left: 140px;
         top: 300px;
       }
       #node-v-stand {
-        left: 120px;
+        left: 20px;
         top: 300px;
       }
       #node-adCampaign {
-        left: 120px;
+        left: 20px;
         top: 420px;
       }
       #node-fan {
-        left: 240px;
+        left: 140px;
         top: 180px;
       }
       #node-attr {
-        left: 240px;
+        left: 140px;
         top: 60px;
       }
       #node-drink {
-        left: 120px;
+        left: 20px;
         top: 180px;
       }
       #node-friendPower {
-        left: 240px;
+        left: 140px;
         top: 420px;
       }
       #node-f-sec {
-        left: 360px;
+        left: 260px;
         top: 180px;
       }
       #node-vip {
-        left: 360px;
+        left: 260px;
         top: 60px;
       }
 
@@ -1117,41 +1117,41 @@
 
       /* Реакция (новый центр вправо) */
       #node-reaction {
-        left: 600px;
+        left: 500px;
         top: 300px;
       }
 
       /* Экипировка */
       #node-equip {
-        left: 720px;
-        top: 300px;
+        left: 620px;
+        top: 180px;
       }
 
       /* Футболист */
       #node-footy {
-        left: 720px;
-        top: 180px;
+        left: 620px;
+        top: 60px;
       }
 
       /* Тренер */
       #node-coach {
-        left: 840px;
-        top: 180px;
+        left: 740px;
+        top: 60px;
       }
 
       /* Награда */
       #node-reward {
-        left: 720px;
-        top: 60px;
+        left: 620px;
+        top: -60px;
       }
       #node-personalReward {
-        left: 720px;
+        left: 500px;
         top: -60px;
       }
 
-      /* Команда */
+      /* состязание */
       #node-competition {
-        left: 600px;
+        left: 380px;
         top: -60px;
         background: linear-gradient(135deg, #1a1a1a 0%, #2c3e50 100%);
         border: 2px solid #f1c40f;
@@ -1160,102 +1160,105 @@
 
       /* Большой куш */
       #node-bigReward {
-        left: 840px;
-        top: 60px;
+        left: 740px;
+        top: -60px;
       }
 
-      /* === ВЕРХ ОТ РЕАКЦИИ === */
 
       #node-delay {
-        left: 600px;
+        left: 500px;
         top: 180px;
       }
 
       #node-time {
-        left: 600px;
+        left: 500px;
         top: 60px;
       }
 
       #node-timeCoin {
-        left: 480px;
+        left: 380px;
         top: 180px;
       }
       #node-crystalTime {
-        left: 480px;
+        left: 380px;
         top: 60px;
       }
 
       /* === НИЖНЯЯ ВЕТКА === */
 
       #node-crit {
-        left: 480px;
+        left: 380px;
         top: 420px;
       }
 
       #node-cCoin {
-        left: 480px;
+        left: 380px;
         top: 540px;
       }
 
       #node-midas {
-        left: 480px;
+        left: 380px;
         top: 660px;
       }
 
       #node-midasCrit {
-        left: 360px;
+        left: 260px;
         top: 660px;
       }
 
       #node-specialCrit {
-        left: 600px;
-        top: 660px;
+        left: 740px;
+        top: 180px;
       }
 
       /* === НОВАЯ ВЕТКА МЯЧЕЙ === */
 
       #node-multiBall {
-        left: 600px;
-        top: 420px;
+        left: 620px;
+        top: 300px;
       }
       #node-piggy {
-        left: 840px;
+        left: 740px;
         top: 420px;
       }
       #node-surprisePiggy {
-        left: 840px;
+        left: 860px;
+        top: 420px;
+      }
+      #node-shockwave{
+        left: 740px;
         top: 540px;
       }
       #node-specialReaction {
-        left: 600px;
-        top: 540px;
+        left: 740px;
+        top: 300px;
       }
 
       #node-goldBall {
-        left: 720px;
+        left: 620px;
         top: 540px;
       }
 
       #node-fireBall {
-        left: 720px;
+        left: 620px;
         top: 420px;
       }
       #node-crystalBall {
-        left: 720px;
+        left: 620px;
         top: 660px;
       }
 
       #node-synergy {
-        left: 840px;
+        left: 740px;
         top: 660px;
       }
       #node-reflex {
-        left: 840px;
-        top: 300px;
+        left: 500px;
+        top: 420px;
       }
       #node-telekinesis {
-        left: 960px;
-        top: 300px;
+        left: 500px;
+        top: 540px;
       }
 
       /* Эффект при покупке */
@@ -2563,6 +2566,7 @@ else if (type === "tele") {
           vip: 0,
           reflex: 0,
           telekinesis: 0,
+          shockwave: 0,
           competition: 0,
         },
         max: {
@@ -2605,6 +2609,7 @@ else if (type === "tele") {
           vip: 3,
           reflex: 5,
           telekinesis: 3,
+          shockwave: 3,
           competition: 1,
         },
 
@@ -2647,7 +2652,8 @@ else if (type === "tele") {
           crystalTime: 100,
           vip: 150,
           reflex: 1000,
-          telekinesis: 1000,
+          telekinesis: 200,
+          shockwave: 100,
           competition: 10000,
         },
       };
@@ -2875,6 +2881,14 @@ else if (type === "tele") {
           cur: "coin",
           desc: "Шанс 0.5%, 1%, 1.5% появления копилки с особой наградой. С каждым уровнем копилка становится крепче, но и награда растёт",
         },
+{
+          id: "node-shockwave",
+          k: "shockwave",
+          name: "ВЗРЫВНАЯ ВОЛНА",
+          cur: "coin",
+          desc: "После того, как свинка-копилка разбита, появляется волна, которая ударяет по соседним объектам, нанося им урон",
+        },
+
         {
           id: "node-specialReaction",
           k: "specialReaction",
@@ -2921,7 +2935,7 @@ else if (type === "tele") {
           id: "node-telekinesis",
           k: "telekinesis",
           name: "ТЕЛЕКИНЕЗ",
-          cur: "xp",
+          cur: "coin",
           desc: "10%,20%,30% шанс, ударить по соседнему объекту при ударе.",
         },
         {
@@ -3097,10 +3111,10 @@ else if (type === "tele") {
           if (n.k === "vip") canSee = data.lvls.fSec >= 1;
 
           // Правая верхняя ветка от Реакции
-          if (n.k === "equip" || n.k === "delay" || n.k === "multiBall")
+          if (n.k === "reflex" || n.k === "delay" || n.k === "multiBall")
             canSee = data.lvls.reaction >= 1;
 
-          if (n.k === "footy" || n.k === "reflex" ) canSee = data.lvls.equip >= 1;
+          if (n.k === "footy" ) canSee = data.lvls.equip >= 1;
 
           if (n.k === "time") canSee = data.lvls.delay >= 1;
           if (n.k === "timeCoin") canSee = data.lvls.delay >= 1;
@@ -3122,13 +3136,13 @@ else if (type === "tele") {
           if (n.k === "midasCrit") canSee = data.lvls.midas >= 1;
 
           // Новая ветка мячей
-          if (n.k === "specialReaction" || n.k === "fireBall")
+          if (n.k === "specialReaction" || n.k === "fireBall" || n.k === "equip")
             canSee = data.lvls.multiBall >= 1;
 
           if (n.k === "specialCrit") canSee = data.lvls.specialReaction >= 1;
 
           if (n.k === "goldBall" || n.k === "piggy") canSee = data.lvls.fireBall >= 1;
-          if (n.k === "surprisePiggy") canSee = data.lvls.piggy >= 1;
+          if (n.k === "surprisePiggy" || n.k === "shockwave") canSee = data.lvls.piggy >= 1;
 
           if (n.k === "crystalBall") canSee = data.lvls.goldBall >= 1;
 
@@ -4142,7 +4156,7 @@ function handleKick(event) {
     }
   }
 
-  if (Math.random() * 100 < [0, 50, 60, 70][data.lvls.delay]) {
+  if (Math.random() * 100 < [0, 0.5, 1, 1.5][data.lvls.delay]) {
     curMs += 1000;
 
     spawnFloatingText("+1", event.clientX + 20, event.clientY + 40, "time");
