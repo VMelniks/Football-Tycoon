@@ -762,6 +762,31 @@
         transform: translate(-50%, -50%);
       }
 
+
+      .kiosk-item {
+    position: absolute;
+    bottom: 47%; /* Располагаем в нижней части поля по бокам */
+    width: 120px; /* Настрой ширину под свои картинки */
+    height: auto;
+    z-index: 5;
+    display: none; /* Скрыты, пока не купим */
+    transition: transform 0.3s ease;
+}
+
+#kiosk-drinks {
+    left: 33%; /* Слева */
+}
+
+#kiosk-attr {
+    right: 33%; /* Справа */
+}
+
+.kiosk-item img {
+    width: 100%;
+    height: auto;
+    image-rendering: pixelated; /* Чтобы сохранить пиксель-арт */
+}
+
       .viewer-sprite {
         width: 30px; /* Укажи ширину ОДНОГО кадра из твоего атласа */
         height: 35px; /* Укажи высоту ОДНОГО кадра */
@@ -946,11 +971,69 @@
         }
       }
 
+.clone {
+  opacity: 0.6;
+
+  filter:
+    brightness(1.1)
+    saturate(1.05)
+    drop-shadow(0 0 6px rgba(120, 200, 255, 0.6))
+    drop-shadow(0 0 12px rgba(120, 220, 255, 0.45));
+
+  animation:
+    ballIdle 4s ease-in-out infinite,
+    clonePulse 1.4s ease-in-out infinite;
+}      
+
+@keyframes clonePulse {
+  0%, 100% {
+    opacity: 0.6;
+    filter:
+      brightness(1.1)
+      saturate(1.05)
+      drop-shadow(0 0 6px rgba(120, 200, 255, 0.6))
+      drop-shadow(0 0 12px rgba(120, 220, 255, 0.45));
+  }
+
+  50% {
+    opacity: 0.95;
+    filter:
+      brightness(1.25)
+      saturate(1.1)
+      drop-shadow(0 0 10px rgba(160, 240, 255, 0.9))
+      drop-shadow(0 0 18px rgba(160, 240, 255, 0.6))
+      drop-shadow(0 0 28px rgba(200, 255, 255, 0.4));
+  }
+}
+
 .tele-hit {
   filter:
     drop-shadow(0 0 8px rgba(120, 220, 255, 0.95))
     drop-shadow(0 0 16px rgba(80, 180, 255, 0.8))
     drop-shadow(0 0 28px rgba(180, 255, 255, 0.55));
+}
+
+
+.clone-piggy,
+.clone-surprise-piggy {
+  position: absolute;
+  width: 100px;
+  height: auto;
+  display: none;
+  cursor: pointer;
+  image-rendering: pixelated;
+  z-index: 1100;
+  transform: translate(-50%, -50%);
+}
+
+.clone-piggy {
+  filter: brightness(1.08) saturate(0.9)
+    drop-shadow(0 0 8px rgba(255,255,255,0.35));
+}
+
+.clone-surprise-piggy {
+  filter: brightness(1.1) saturate(1.05)
+    drop-shadow(0 0 10px rgba(180,255,255,0.4));
 }
 
 
@@ -985,7 +1068,7 @@
 }
 #surprise-piggy {
   position: absolute;
-  width: 105px;
+  width: 100px;
   height: auto;
   display: none;
   cursor: pointer;
@@ -1040,6 +1123,27 @@
 
 .surprise-hp-fill {
   background: linear-gradient(90deg, #6ee7ff, #d66bff);
+}
+
+.freeze {
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: bold;
+  text-shadow:
+    0 0 6px rgba(180, 220, 255, 0.9),
+    0 0 12px rgba(180, 220, 255, 0.7),
+    0 0 18px rgba(220, 240, 255, 0.6);
+}
+.freeze-effect {
+  filter:
+    brightness(1.12)
+    saturate(0.45)
+    hue-rotate(195deg)
+    drop-shadow(0 0 8px rgba(190, 235, 255, 0.95))
+    drop-shadow(0 0 16px rgba(120, 210, 255, 0.8))
+    drop-shadow(0 0 24px rgba(220, 250, 255, 0.45));
+  outline: 1px solid rgba(230, 250, 255, 0.5);
+  outline-offset: 1px;
 }
 
 #shockwave-ring {
@@ -1294,121 +1398,105 @@
   left: calc(500px + var(--offset-x));
   top: 540px;
 }
+#node-clone {
+  left: calc(500px + var(--offset-x));
+  top: 660px;
+}
+#node-freezing {
+  left: calc(860px + var(--offset-x));
+  top: 300px;
+}
 
 /* Эффект при покупке */
 #node-competition.bought {
   background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
   border-color: #fff;
 }
+
+.hidden {
+  display: none !important;
+}
+
+.control-label {
+  font-weight: bold;
+}
+
+.section-divider {
+  border: 0.5px solid rgba(255, 255, 255, 0.1);
+  margin: 15px 0;
+}
+
+.start-game-btn--full {
+  margin-top: 20px;
+  width: 100%;
+}
+
+.start-match-btn {
+  background: #2ecc71;
+  color: white;
+  border: none;
+  padding: 15px 60px;
+  font-weight: bold;
+  border-radius: 50px;
+  cursor: pointer;
+}
+
     </style>
   </head>
   <body>
-    <div id="custom-screen" class="screen active">
-      <div class="custom-card">
-        <h2>СОЗДАНИЕ ИГРОКА</h2>
+<div id="custom-screen" class="screen active">
+  <div class="custom-card">
+    <h2>СОЗДАНИЕ ИГРОКА</h2>
 
-        <div class="preview-box" id="player-preview"></div>
+    <div class="preview-box" id="player-preview"></div>
 
-        <div class="custom-controls">
-          <div class="control-row">
-            <button class="menu-btn" onclick="changeHead(-1)">⬅️</button>
-            <span style="font-weight: bold">ЛИЦО</span>
-            <button class="menu-btn" onclick="changeHead(1)">➡️</button>
-          </div>
-
-          <hr
-            style="border: 0.5px solid rgba(255, 255, 255, 0.1); margin: 15px 0"
-          />
-
-          <div class="color-selection-title">ЦВЕТ МАЙКИ</div>
-          <div class="color-grid">
-            <div
-              class="color-opt"
-              style="background: #fff"
-              onclick="updatePartColor('shirtColor', 'white')"
-            ></div>
-            <div
-              class="color-opt"
-              style="background: #f00"
-              onclick="updatePartColor('shirtColor', 'red')"
-            ></div>
-            <div
-              class="color-opt"
-              style="background: #00f"
-              onclick="updatePartColor('shirtColor', 'blue')"
-            ></div>
-            <div
-              class="color-opt"
-              style="background: #000"
-              onclick="updatePartColor('shirtColor', 'black')"
-            ></div>
-          </div>
-
-          <div class="color-selection-title">ЦВЕТ ШОРТ</div>
-          <div class="color-grid">
-            <div
-              class="color-opt"
-              style="background: #fff"
-              onclick="updatePartColor('shortsColor', 'white')"
-            ></div>
-            <div
-              class="color-opt"
-              style="background: #f00"
-              onclick="updatePartColor('shortsColor', 'red')"
-            ></div>
-            <div
-              class="color-opt"
-              style="background: #00f"
-              onclick="updatePartColor('shortsColor', 'blue')"
-            ></div>
-            <div
-              class="color-opt"
-              style="background: #000"
-              onclick="updatePartColor('shortsColor', 'black')"
-            ></div>
-          </div>
-
-          <div class="color-selection-title">ЦВЕТ ГЕТР</div>
-          <div class="color-grid">
-            <div
-              class="color-opt"
-              style="background: #fff"
-              onclick="updatePartColor('socksColor', 'white')"
-            ></div>
-            <div
-              class="color-opt"
-              style="background: #f00"
-              onclick="updatePartColor('socksColor', 'red')"
-            ></div>
-            <div
-              class="color-opt"
-              style="background: #00f"
-              onclick="updatePartColor('socksColor', 'blue')"
-            ></div>
-            <div
-              class="color-opt"
-              style="background: #000"
-              onclick="updatePartColor('socksColor', 'black')"
-            ></div>
-          </div>
-
-          <button
-            class="start-game-btn"
-            onclick="savePlayerAndStart()"
-            style="margin-top: 20px; width: 100%"
-          >
-            СОХРАНИТЬ И ИГРАТЬ
-          </button>
-        </div>
+    <div class="custom-controls">
+      <div class="control-row">
+        <button class="menu-btn js-change-head" data-step="-1">⬅️</button>
+        <span class="control-label">ЛИЦО</span>
+        <button class="menu-btn js-change-head" data-step="1">➡️</button>
       </div>
-    </div>
 
-    <div class="admin-panel" id="admin-ui" style="display: none">
-      <button class="admin-btn" onclick="addRes('xp', 10000)">+10000 XP</button>
-      <button class="admin-btn" onclick="addRes('coins', 1000)">
-        +1000 Coins
+      <hr class="section-divider" />
+
+      <div class="color-selection-title">ЦВЕТ МАЙКИ</div>
+      <div class="color-grid" data-part="shirtColor">
+        <div class="color-opt" style="background: #fff" data-color="white"></div>
+        <div class="color-opt" style="background: #f00" data-color="red"></div>
+        <div class="color-opt" style="background: #00f" data-color="blue"></div>
+        <div class="color-opt" style="background: #000" data-color="black"></div>
+      </div>
+
+      <div class="color-selection-title">ЦВЕТ ШОРТ</div>
+      <div class="color-grid" data-part="shortsColor">
+        <div class="color-opt" style="background: #fff" data-color="white"></div>
+        <div class="color-opt" style="background: #f00" data-color="red"></div>
+        <div class="color-opt" style="background: #00f" data-color="blue"></div>
+        <div class="color-opt" style="background: #000" data-color="black"></div>
+      </div>
+
+      <div class="color-selection-title">ЦВЕТ ГЕТР</div>
+      <div class="color-grid" data-part="socksColor">
+        <div class="color-opt" style="background: #fff" data-color="white"></div>
+        <div class="color-opt" style="background: #f00" data-color="red"></div>
+        <div class="color-opt" style="background: #00f" data-color="blue"></div>
+        <div class="color-opt" style="background: #000" data-color="black"></div>
+      </div>
+
+      <button
+        id="save-player-btn"
+        class="start-game-btn start-game-btn--full"
+      >
+        СОХРАНИТЬ И ИГРАТЬ
       </button>
     </div>
+  </div>
+</div>
+
+ <div class="admin-panel" id="admin-ui" style="display: none">
+  <button class="admin-btn js-admin-add" data-resource="xp" data-amount="10000">+10000 XP</button>
+  <button class="admin-btn js-admin-add" data-resource="coins" data-amount="1000">+1000 Coins</button>
+</div>
     <div id="summary-overlay">
       <div class="summary-card">
         <h2 style="color: #2ecc71; margin-top: 0">МАТЧ ЗАВЕРШЕН</h2>
@@ -1470,6 +1558,10 @@
               <span>⚡ Комбо-мяч</span>
               <span id="res-xp-combo">0</span>
             </div>
+            <div class="summary-row" id="row-res-tele-xp" style="display: none">
+  <span>🧠 Телекинез</span>
+  <span id="res-xp-tele">0</span>
+</div>
 
             <div
               class="summary-row res-total-row"
@@ -1535,6 +1627,10 @@
               <span>🧣 Атрибутика</span>
               <span id="res-coin-attr">0</span>
             </div>
+            <div class="summary-row" id="row-res-tele-coin" style="display: none">
+  <span>🧠 Телекинез</span>
+  <span id="res-coin-tele">0</span>
+</div>
 
             <div
               class="summary-row res-total-row"
@@ -1588,6 +1684,10 @@
               <span>👑 VIP</span>
               <span id="res-gem-vip">0</span>
             </div>
+            <div class="summary-row" id="row-res-gem-tele" style="display: none">
+  <span>🧠 Телекинез</span>
+  <span id="res-gem-tele">0</span>
+</div>
 
             <div
               class="summary-row res-total-row"
@@ -1600,7 +1700,7 @@
           </div>
         </div>
 
-        <button onclick="closeSummary()" class="menu-btn">В МЕНЮ</button>
+        <button id="close-summary-btn" class="menu-btn">В МЕНЮ</button>
       </div>
     </div>
 
@@ -1614,20 +1714,9 @@
         <div class="tree-viewport">
           <div id="tree"></div>
         </div>
-        <button
-          style="
-            background: #2ecc71;
-            color: white;
-            border: none;
-            padding: 15px 60px;
-            font-weight: bold;
-            border-radius: 50px;
-            cursor: pointer;
-          "
-          onclick="startGame()"
-        >
-          НАЧАТЬ МАТЧ
-        </button>
+       <button id="start-match-btn" class="start-match-btn">
+  НАЧАТЬ МАТЧ
+</button>
       </div>
       <div id="top-stats-ui" class="screen">
   <div class="top-stats-bar">
@@ -1653,6 +1742,12 @@
 </div>
     <div id="game-screen" class="screen">
   <div id="viewers-container"></div>
+  <div id="kiosk-drinks" class="kiosk-item">
+        <img src="match/drinks_kiosk.png" alt="Drinks">
+    </div>
+    <div id="kiosk-attr" class="kiosk-item">
+        <img src="match/attr_kiosk.png" alt="Attributes">
+    </div>
 
   <div class="stopwatch-container">
     <img
@@ -1686,35 +1781,32 @@
 
   <div id="ball-container">
     <img
-      src="match/ball.png"
-      id="ball"
-      alt="Soccer Ball"
-      draggable="false"
-      onclick="handleKick(event)"
-    />
+  src="match/ball.png"
+  id="ball"
+  alt="Soccer Ball"
+  draggable="false"
+/>
   </div>
 
   <img
-    src="match/piggy.png"
-    id="piggy"
-    alt="Piggy"
-    draggable="false"
-    onclick="handleKick(event)"
-  />
+  src="match/piggy.png"
+  id="piggy"
+  alt="Piggy"
+  draggable="false"
+/>
 
   <img
-    src="match/surprisePiggy.png"
-    id="surprise-piggy"
-    alt="Surprise Piggy"
-    draggable="false"
-    onclick="handleKick(event)"
-  />
+  src="match/surprisePiggy.png"
+  id="surprise-piggy"
+  alt="Surprise Piggy"
+  draggable="false"
+/>
 
-  <div id="piggy-hp-bar" class="piggy-hp-bar" style="display: none;">
+  <div id="piggy-hp-bar" class="piggy-hp-bar hidden">
     <div id="piggy-hp-fill" class="piggy-hp-fill"></div>
   </div>
 
-  <div id="surprise-piggy-hp-bar" class="piggy-hp-bar surprise-hp-bar" style="display: none;">
+  <div id="surprise-piggy-hp-bar" class="piggy-hp-bar surprise-hp-bar hidden">
     <div id="surprise-piggy-hp-fill" class="piggy-hp-fill surprise-hp-fill"></div>
   </div>
 
@@ -1739,60 +1831,88 @@
 </div>
 
     <script>
+
+const music = {
+
+  menu: new Audio('match/music/menu.mp3'),
+  game: new Audio('match/music/game.mp3'),
+
+};
+music.menu.loop = true;
+music.game.loop = true;
+
+music.menu.volume = 0.025;
+music.game.volume = 0.025;
+
+      // Создаем "плеер" для звука удара
+const sounds = {
+  kick: new Audio('match/sound/kick.mp3'),
+  gold: new Audio('match/sound/gold.mp3'),
+  fire: new Audio('match/sound/fire.mp3'),
+  combo: new Audio('match/sound/combo.mp3'),
+  crystal: new Audio('match/sound/crystal.mp3'),
+
+  piggyHit: new Audio('match/sound/piggy_hit.mp3'),
+  piggyBreak: new Audio('match/sound/piggy_break.mp3'),
+
+  telekinesis: new Audio('match/sound/tele.mp3'),
+  shockwave: new Audio('match/sound/shockwave.mp3'),
+  freeze: new Audio('match/sound/freeze.mp3'),
+};
       let friendAtlasData = null;
       let friendAnimationInterval = null;
       let currentFriendFrame = 0;
       let viewerAtlasData = null;
       let viewerFrames = [];
       const ballPositions = [
-        { left: "18%", top: "28%" },
-        { left: "32%", top: "28%" },
-        { left: "46%", top: "28%" },
-        { left: "60%", top: "28%" },
-        { left: "74%", top: "28%" },
+        { left: "18%", top: "24%" },
+        { left: "32%", top: "24%" },
+        { left: "46%", top: "24%" },
+        { left: "60%", top: "24%" },
+        { left: "74%", top: "24%" },
         { left: "18%", top: "38%" },
         { left: "32%", top: "38%" },
         { left: "46%", top: "38%" },
         { left: "60%", top: "38%" },
         { left: "74%", top: "38%" },
-        { left: "18%", top: "48%" },
-        { left: "32%", top: "48%" },
-        { left: "46%", top: "48%" },
-        { left: "60%", top: "48%" },
-        { left: "74%", top: "48%" },
-        { left: "18%", top: "58%" },
-        { left: "32%", top: "58%" },
-        { left: "46%", top: "58%" },
-        { left: "60%", top: "58%" },
-        { left: "74%", top: "58%" },
-        { left: "18%", top: "68%" },
-        { left: "32%", top: "68%" },
-        { left: "46%", top: "68%" },
-        { left: "60%", top: "68%" },
-        { left: "74%", top: "68%" },
+        { left: "18%", top: "52%" },
+        { left: "32%", top: "52%" },
+        { left: "46%", top: "52%" },
+        { left: "60%", top: "52%" },
+        { left: "74%", top: "52%" },
+        { left: "18%", top: "66%" },
+        { left: "32%", top: "66%" },
+        { left: "46%", top: "66%" },
+        { left: "60%", top: "66%" },
+        { left: "74%", top: "66%" },
+        { left: "18%", top: "80%" },
+        { left: "32%", top: "80%" },
+        { left: "46%", top: "80%" },
+        { left: "60%", top: "80%" },
+        { left: "74%", top: "80%" },
       ];
 
       const piggyPositions = [
-  { left: "18%", top: "26%" },
-  { left: "30%", top: "26%" },
-  { left: "42%", top: "26%" },
-  { left: "54%", top: "26%" },
-  { left: "66%", top: "26%" },
-  { left: "78%", top: "26%" },
+  { left: "18%", top: "30%" },
+  { left: "30%", top: "30%" },
+  { left: "42%", top: "30%" },
+  { left: "54%", top: "30%" },
+  { left: "66%", top: "30%" },
+  { left: "78%", top: "30%" },
 
-  { left: "18%", top: "40%" },
-  { left: "30%", top: "40%" },
-  { left: "42%", top: "40%" },
-  { left: "54%", top: "40%" },
-  { left: "66%", top: "40%" },
-  { left: "78%", top: "40%" },
+  { left: "18%", top: "45%" },
+  { left: "30%", top: "45%" },
+  { left: "42%", top: "45%" },
+  { left: "54%", top: "45%" },
+  { left: "66%", top: "45%" },
+  { left: "78%", top: "45%" },
 
-  { left: "18%", top: "54%" },
-  { left: "30%", top: "54%" },
-  { left: "42%", top: "54%" },
-  { left: "54%", top: "54%" },
-  { left: "66%", top: "54%" },
-  { left: "78%", top: "54%" },
+  { left: "18%", top: "60%" },
+  { left: "30%", top: "60%" },
+  { left: "42%", top: "60%" },
+  { left: "54%", top: "60%" },
+  { left: "66%", top: "60%" },
+  { left: "78%", top: "60%" },
 ];
 
       // Функция загрузки JSON (Атласа)
@@ -1817,6 +1937,43 @@
           console.log("Ошибка загрузки viewer.json:", e);
         }
       }
+
+  function playSound(sound, volume = 0.2, randomPitch = true) {
+  if (!sound) return;
+
+  try {
+    sound.pause();
+    sound.currentTime = 0;
+
+    sound.volume = volume;
+
+    if (randomPitch) {
+      sound.playbackRate = 0.9 + Math.random() * 0.2;
+    } else {
+      sound.playbackRate = 1;
+    }
+
+    sound.play();
+  } catch (e) {}
+}    
+
+function playMusic(type) {
+  Object.values(music).forEach(m => {
+    m.pause();
+    m.currentTime = 0;
+  });
+
+  const track = music[type];
+  if (!track) return;
+
+  track.play().catch(() => {});
+}
+function stopMusic() {
+  Object.values(music).forEach(m => {
+    m.pause();
+    m.currentTime = 0;
+  });
+}
 
 function getFreePiggyPosition() {
   const usedPositions = [];
@@ -1904,9 +2061,9 @@ function getPiggyData() {
 
   if (lvl === 1) {
     const variants = [
-      { hp: 50, reward: 5 },
-      { hp: 75, reward: 8 },
+      { hp: 75, reward: 7 },
       { hp: 100, reward: 10 },
+      { hp: 125, reward: 13 },
     ];
     return variants[Math.floor(Math.random() * variants.length)];
   }
@@ -2031,6 +2188,234 @@ function updateSurprisePiggyHpBar() {
   const percent = Math.max(0, (surprisePiggyState.hp / surprisePiggyState.maxHp) * 100);
   fill.style.width = percent + "%";
 }
+function getFreeClonePosition() {
+  const used = [];
+
+  if (currentMainBallIndex !== -1) {
+    used.push(currentMainBallIndex);
+  }
+
+  currentExtraBallIndexes.forEach((idx) => {
+    if (idx !== -1 && !used.includes(idx)) {
+      used.push(idx);
+    }
+  });
+
+  clonePiggies.forEach((piggy) => {
+    if (piggy.style.display === "block") {
+      const idx = parseInt(piggy.dataset.ballIndex || "-1", 10);
+      if (idx !== -1 && !used.includes(idx)) used.push(idx);
+    }
+  });
+
+  cloneSurprisePiggies.forEach((piggy) => {
+    if (piggy.style.display === "block") {
+      const idx = parseInt(piggy.dataset.ballIndex || "-1", 10);
+      if (idx !== -1 && !used.includes(idx)) used.push(idx);
+    }
+  });
+
+  const piggy = document.getElementById("piggy");
+  if (piggyState.active && piggy) {
+    const posKey = `${piggy.style.left}|${piggy.style.top}`;
+    const idx = ballPositions.findIndex(
+      (p) => `${p.left}|${p.top}` === posKey
+    );
+    if (idx !== -1 && !used.includes(idx)) used.push(idx);
+  }
+
+  const surprisePiggy = document.getElementById("surprise-piggy");
+  if (surprisePiggyState.active && surprisePiggy) {
+    const posKey = `${surprisePiggy.style.left}|${surprisePiggy.style.top}`;
+    const idx = ballPositions.findIndex(
+      (p) => `${p.left}|${p.top}` === posKey
+    );
+    if (idx !== -1 && !used.includes(idx)) used.push(idx);
+  }
+
+  return getRandomFreeBallIndex(used);
+}
+
+function createClonePiggy() {
+  const field = document.getElementById("game-screen");
+  if (!field) return null;
+
+  const piggy = document.createElement("img");
+  piggy.src = "match/piggy.png";
+  piggy.className = "clone-piggy";
+  piggy.style.display = "none";
+  piggy.draggable = false;
+  piggy.onclick = handleKick;
+
+  piggy.dataset.isClone = "1";
+  piggy.dataset.ballIndex = "-1";
+  piggy.dataset.spawnTime = "0";
+  piggy.dataset.lifeTime = "0";
+  piggy.dataset.hp = "0";
+  piggy.dataset.maxHp = "0";
+  piggy.dataset.reward = "0";
+
+  field.appendChild(piggy);
+  return piggy;
+}
+
+function createCloneSurprisePiggy() {
+  const field = document.getElementById("game-screen");
+  if (!field) return null;
+
+  const piggy = document.createElement("img");
+  piggy.src = "match/surprisePiggy.png";
+  piggy.className = "clone-surprise-piggy";
+  piggy.style.display = "none";
+  piggy.draggable = false;
+  piggy.onclick = handleKick;
+
+  piggy.dataset.isClone = "1";
+  piggy.dataset.ballIndex = "-1";
+  piggy.dataset.spawnTime = "0";
+  piggy.dataset.lifeTime = "0";
+  piggy.dataset.hp = "0";
+  piggy.dataset.maxHp = "0";
+  piggy.dataset.coinReward = "0";
+  piggy.dataset.gemReward = "0";
+
+  field.appendChild(piggy);
+  return piggy;
+}
+function tryCloneTarget(target) {
+  if (!target) return;
+  if ((data.lvls.clone || 0) <= 0) return;
+  if (target.dataset?.isClone === "1") return;
+
+  const chance = getCloneChance();
+  if (Math.random() * 100 >= chance) return;
+
+  const freeIndex = getFreeClonePosition();
+  if (freeIndex === -1) return;
+
+  const pos = ballPositions[freeIndex];
+  if (!pos) return;
+
+  const now = Date.now();
+
+  // Клон обычного мяча / special мяча
+  if (target.id === "ball" || target.classList.contains("extra-ball")) {
+    const clone = createExtraBall();
+    if (!clone) return;
+
+    clone.style.display = "block";
+    clone.style.left = pos.left;
+    clone.style.top = pos.top;
+    clone.style.setProperty("--angle", "0deg");
+    clone.dataset.ballIndex = freeIndex.toString();
+    clone.dataset.spawnTime = now.toString();
+
+    let lifeTime;
+
+if (target.id === "ball") {
+  lifeTime = getMainBallLifeTime();
+} else {
+  lifeTime = getExtraBallLifeTime();
+}
+
+clone.dataset.lifeTime = lifeTime.toString();
+    clone.dataset.isClone = "1";
+
+    const type = target.dataset.ballType || "normal";
+    applyBallType(clone, type);
+    clone.classList.add("clone");
+
+    extraBalls.push(clone);
+    currentExtraBallIndexes.push(freeIndex);
+
+    const center = getElementCenter(clone);
+    if (center) {
+      spawnFloatingText("CLONE!", center.x, center.y - 20, "tele");
+    }
+    return;
+  }
+
+  // Клон обычной свинки
+  if (target.id === "piggy" && piggyState.active) {
+    const clone = createClonePiggy();
+    if (!clone) return;
+    clone.classList.add("clone");
+
+    clone.style.display = "block";
+    clone.style.left = pos.left;
+    clone.style.top = pos.top;
+    clone.dataset.ballIndex = freeIndex.toString();
+    clone.dataset.spawnTime = now.toString();
+    clone.dataset.lifeTime = getPiggyLifeTime().toString();
+    clone.dataset.hp = piggyState.maxHp.toString();
+    clone.dataset.maxHp = piggyState.maxHp.toString();
+    clone.dataset.reward = piggyState.reward.toString();
+
+    clonePiggies.push(clone);
+
+    const center = getElementCenter(clone);
+    if (center) {
+      spawnFloatingText("CLONE!", center.x, center.y - 20, "tele");
+    }
+    return;
+  }
+
+  // Клон surprise-свинки
+  if (target.id === "surprise-piggy" && surprisePiggyState.active) {
+    const clone = createCloneSurprisePiggy();
+    if (!clone) return;
+    clone.classList.add("clone");
+
+    clone.style.display = "block";
+    clone.style.left = pos.left;
+    clone.style.top = pos.top;
+    clone.dataset.ballIndex = freeIndex.toString();
+    clone.dataset.spawnTime = now.toString();
+    clone.dataset.lifeTime = getSurprisePiggyLifeTime().toString();
+    clone.dataset.hp = surprisePiggyState.maxHp.toString();
+    clone.dataset.maxHp = surprisePiggyState.maxHp.toString();
+    clone.dataset.coinReward = surprisePiggyState.coinReward.toString();
+    clone.dataset.gemReward = surprisePiggyState.gemReward.toString();
+
+    cloneSurprisePiggies.push(clone);
+
+    const center = getElementCenter(clone);
+    if (center) {
+      spawnFloatingText("CLONE!", center.x, center.y - 20, "tele");
+    }
+  }
+}
+function updateClonePiggiesLife() {
+  const now = Date.now();
+
+  clonePiggies.forEach((piggy) => {
+    if (piggy.style.display !== "block") return;
+
+    const spawnTime = parseInt(piggy.dataset.spawnTime || "0", 10);
+    const lifeTime = parseInt(piggy.dataset.lifeTime || "0", 10);
+
+    if (spawnTime <= 0 || lifeTime <= 0) return;
+
+    if (now - spawnTime >= lifeTime) {
+      piggy.style.display = "none";
+      piggy.dataset.ballIndex = "-1";
+    }
+  });
+
+  cloneSurprisePiggies.forEach((piggy) => {
+    if (piggy.style.display !== "block") return;
+
+    const spawnTime = parseInt(piggy.dataset.spawnTime || "0", 10);
+    const lifeTime = parseInt(piggy.dataset.lifeTime || "0", 10);
+
+    if (spawnTime <= 0 || lifeTime <= 0) return;
+
+    if (now - spawnTime >= lifeTime) {
+      piggy.style.display = "none";
+      piggy.dataset.ballIndex = "-1";
+    }
+  });
+}
 
 
 function applyBallType(ball, type) {
@@ -2127,6 +2512,15 @@ function applyBallType(ball, type) {
           applyBallType(mainBall, "normal");
         }
       }
+
+function getPiggyLifeTime() {
+  return [0, 1000, 2000, 3000][data.lvls.piggy || 0] || 1000;
+}
+
+function getSurprisePiggyLifeTime() {
+  return [0, 1200, 2200, 3200][data.lvls.surprisePiggy || 0] || 1200;
+}
+
       function trySpawnExtraBall() {
         const spawnChance = 0.1; // всегда 10%
 
@@ -2198,6 +2592,22 @@ function applyBallType(ball, type) {
         });
       }
 
+function updateKiosks() {
+    const drinksKiosk = document.getElementById('kiosk-drinks');
+    const attrKiosk = document.getElementById('kiosk-attr');
+
+    // Если куплен хотя бы 1 уровень напитков — показываем киоск
+    if (drinksKiosk) {
+        drinksKiosk.style.display = (data.lvls.drink > 0) ? 'block' : 'none';
+    }
+
+    // Если куплен хотя бы 1 уровень атрибутики — показываем киоск
+    if (attrKiosk) {
+        attrKiosk.style.display = (data.lvls.attr > 0) ? 'block' : 'none';
+    }
+}
+
+
       function trySpawnPiggy() {
   if (data.lvls.piggy <= 0) return;
   if (piggyState.active) return;
@@ -2221,7 +2631,7 @@ if (!pos) return;
   piggyState.maxHp = piggyData.hp;
   piggyState.reward = piggyData.reward;
   piggyState.spawnTime = Date.now();
-  piggyState.lifeTime = [0, 1000, 2000, 3000][data.lvls.piggy || 0] || 1000;
+  piggyState.lifeTime = getPiggyLifeTime();
 
   updatePiggySprite();
   updatePiggyHpBar();
@@ -2252,7 +2662,7 @@ if (!pos) return;
   surprisePiggyState.coinReward = piggyData.coinReward;
   surprisePiggyState.gemReward = piggyData.gemReward;
   surprisePiggyState.spawnTime = Date.now();
-  surprisePiggyState.lifeTime = [0, 1200, 2200, 3200][data.lvls.surprisePiggy || 0] || 1200;
+  surprisePiggyState.lifeTime = getSurprisePiggyLifeTime();
 
   updateSurprisePiggySprite();
   updateSurprisePiggyHpBar();
@@ -2519,6 +2929,18 @@ else if (type === "shockwave") {
   el.style.fontWeight = "bold";
   el.style.textShadow = "0 0 8px #ffb347, 0 0 16px #ff6a00";
 }
+else if (type === "freeze") {
+  el.className = "floating-xp";
+  el.innerHTML = text;
+  el.style.color = "#ffffff";
+  el.style.fontSize = "1.4rem";
+  el.style.fontWeight = "bold";
+  el.style.textShadow = `
+    0 0 6px #bfefff,
+    0 0 12px #8fdfff,
+    0 0 20px #dff9ff
+  `;
+}
 
   // Монеты
   else if (type === "coin") {
@@ -2610,7 +3032,9 @@ else if (type === "tele") {
           vip: 0,
           reflex: 0,
           telekinesis: 0,
+          clone: 0,
           shockwave: 0,
+          freezing:0,
           competition: 0,
         },
         max: {
@@ -2653,7 +3077,9 @@ else if (type === "tele") {
           vip: 3,
           reflex: 5,
           telekinesis: 3,
+          clone: 3,
           shockwave: 3,
+          freezing: 3,  
           competition: 1,
         },
 
@@ -2669,15 +3095,15 @@ else if (type === "tele") {
           time: 50,
           viewer: 150,
           friendPower: 10,
-          vStand: 1200,
+          vStand: 30,
           fSec: 150,
-          fan: 20,
+          fan: 1200,
           attr: 100,
           drink: 80,
           midas: 50,
           midasCrit: 200,
-          reward: 30,
-          bigReward: 60,
+          reward: 50,
+          bigReward: 100,
           specialCrit: 50,
           equip: 10,
           timeCoin: 300,
@@ -2691,13 +3117,15 @@ else if (type === "tele") {
           synergy: 200,
           piggy: 50,
           surprisePiggy: 100,
-          personalReward: 100,
+          personalReward: 150,
           adCampaign: 50,
           crystalTime: 100,
           vip: 150,
           reflex: 1000,
-          telekinesis: 300,
+          telekinesis: 200,
+          clone: 400,
           shockwave: 100,
+          freezing: 100,
           competition: 10000,
         },
       };
@@ -2780,7 +3208,7 @@ else if (type === "tele") {
         {
           id: "node-midas",
           k: "midas",
-          name: "МИДАС",
+          name: "УДАР МИДАСА",
           cur: "coin",
           desc: "Шанс получить 🟡 за клик",
         },
@@ -2803,13 +3231,13 @@ else if (type === "tele") {
           k: "viewer",
           name: "ЗРИТЕЛЬ",
           cur: "xp",
-          desc: "30% шанс, что на игру придёт зритель и принесёт доход - 1🟡",
+          desc: "30% шанс, что на игру придёт зритель и принесёт доход - 2🟡",
         },
         {
           id: "node-v-stand",
           k: "vStand",
           name: "ТРИБУНА",
-          cur: "xp",
+          cur: "coin",
           desc: "Зрителей +10",
         },
         {
@@ -2859,8 +3287,8 @@ else if (type === "tele") {
           id: "node-fan",
           k: "fan",
           name: "ФАНАТ",
-          cur: "coin",
-          desc: "Ходит на каждую игру и приносит доход 1🟡",
+          cur: "xp",
+          desc: "Ходит на каждую игру и приносит доход 2🟡",
         },
         {
           id: "node-drink",
@@ -2941,6 +3369,13 @@ else if (type === "tele") {
           desc: "Увеличивает время жизни только доп. мячей (+0.25с)",
         },
         {
+          id: "node-freezing",
+          k: "freezing",
+          name: "МОРОЗНОЕ КОСАНИЕ",
+          cur: "coin",
+          desc: "Шанс заморозить объект и увеличить время его жизни (+0.25с)",
+        },
+        {
           id: "node-goldBall",
           k: "goldBall",
           name: "ЗОЛОТОЙ МЯЧ",
@@ -2983,6 +3418,13 @@ else if (type === "tele") {
           desc: "10%,20%,30% шанс, ударить по соседнему объекту при ударе.",
         },
         {
+          id: "node-clone",
+          k: "clone",
+          name: "КЛОН",
+          cur: "coin",
+          desc: "1%,2%,3% шанс создать клон объекта при ударе, который повторяет все его свойства",
+        },
+        {
           id: "node-personalReward",
           k: "personalReward",
           name: "ИНД. НАГРАДА",
@@ -3010,6 +3452,7 @@ else if (type === "tele") {
       const MAX_HEADS = 18;
 
       window.onload = function () {
+        playMusic("menu");
         renderPlayerPreview();
       };
 
@@ -3170,6 +3613,7 @@ else if (type === "tele") {
 
           if (n.k === "bigReward" || n.k === "personalReward") canSee = data.lvls.reward >= 1;
           if (n.k === "telekinesis") canSee = data.lvls.reflex >= 1;
+          if (n.k === "clone") canSee = data.lvls.telekinesis >= 1;
           if (n.k === "competition") canSee = data.lvls.personalReward >= 1;
 
           // Нижняя ветка критов
@@ -3183,7 +3627,7 @@ else if (type === "tele") {
           if (n.k === "specialReaction" || n.k === "fireBall" || n.k === "equip")
             canSee = data.lvls.multiBall >= 1;
 
-          if (n.k === "specialCrit") canSee = data.lvls.specialReaction >= 1;
+          if (n.k === "specialCrit" || n.k === "freezing") canSee = data.lvls.specialReaction >= 1;
 
           if (n.k === "goldBall" || n.k === "piggy") canSee = data.lvls.fireBall >= 1;
           if (n.k === "surprisePiggy" || n.k === "shockwave") canSee = data.lvls.piggy >= 1;
@@ -3290,6 +3734,7 @@ if (data[currencyKey] >= data.costs[type]) {
   }
 
   updateUI();
+  updateKiosks();
 
           if (
             type === "multiBall" &&
@@ -3303,12 +3748,18 @@ if (data[currencyKey] >= data.costs[type]) {
       let gInt, aInt, ballMoveInterval, extraBallLifeInterval, extraBallSpawnInterval, curMs, totalEl,
     sCoins, sGems, sClick, sFriend, sFooty, xpForCoin, personalXpForGem, sSpecialCritXP,
     sBallXP, sBallCoins, sBallGems, sLuckCoins, sPiggyCoins, sPiggyGems,
-    sFireXP, sComboXP, sGoldCoins, sComboCoins, sCrystalGems, sComboGems,
+    sFireXP, sComboXP, sGoldCoins, sComboCoins, sCrystalGems, sComboGems, sTeleXP, sTeleCoins, sTeleGems,
     sPersonalRewardGems, sRewardCoins, sMidasCoins, sVipGems, sCrystalTimeGems, actualViewerCount;
       let extraBalls = [];
+      let clonePiggies = [];
+      let cloneSurprisePiggies = [];
       let currentMainBallIndex = -1;
       let currentExtraBallIndexes = [];
-
+      let mainBallMoveTimeout;
+      let mainBallMoveDelay = 0;
+      let mainBallMoveStartedAt = 0;
+      
+      let cloneLifeInterval;
       let piggySpawnInterval;
       let piggyLifeInterval;
       let reflexInterval;
@@ -3334,6 +3785,24 @@ let surprisePiggyState = {
   spawnTime: 0,
   lifeTime: 0,
 };
+
+function getMainBallLifeTime() {
+  return 750 + (data.lvls.reaction || 0) * 250;
+}
+
+function scheduleMainBallMove(delay = null) {
+  clearTimeout(mainBallMoveTimeout);
+
+  const time = delay ?? getMainBallLifeTime();
+
+  mainBallMoveDelay = time;
+  mainBallMoveStartedAt = Date.now();
+
+  mainBallMoveTimeout = setTimeout(() => {
+    moveAllBallsToRandomPositions();
+    scheduleMainBallMove(getMainBallLifeTime());
+  }, time);
+}
 
 function getReflexInterval() {
   return [0, 300, 250, 200, 150, 100][data.lvls.reflex || 0] || 0;
@@ -3376,6 +3845,9 @@ function getShockwaveTargets(excludedElement = null) {
   }
 
   return targets;
+}
+function getCloneChance() {
+  return [0, 1, 2, 3][data.lvls.clone || 0] || 0;
 }
 
 function getTelekinesisChance() {
@@ -3431,13 +3903,90 @@ function getAutoClickTarget() {
     el.id === "ball" ||
     el.id === "piggy" ||
     el.id === "surprise-piggy" ||
-    el.classList.contains("extra-ball")
+    el.classList.contains("extra-ball") ||
+    el.classList.contains("clone-piggy") ||
+    el.classList.contains("clone-surprise-piggy")
   ) {
     return el;
   }
 
   return null;
 }
+function getFreezingChance() {
+  return [0, 1, 2, 3][data.lvls.freezing || 0] || 0;
+}
+function applyFreezing(target, event) {
+  if (!target) return;
+  if ((data.lvls.freezing || 0) <= 0) return;
+
+  const chance = getFreezingChance();
+  if (Math.random() * 100 >= chance) return;
+  playSound(sounds.freeze, 0.18, false);
+
+  const bonusTime = 250; // 0.25 секунды
+
+  // 🔵 EXTRA BALL (и клоны мячей)
+  if (target.classList.contains("extra-ball")) {
+    let lifeTime = parseInt(target.dataset.lifeTime || "0", 10);
+    if (lifeTime > 0) {
+      lifeTime += bonusTime;
+      target.dataset.lifeTime = lifeTime.toString();
+    }
+  }
+
+  // 🔵 ОСНОВНОЙ МЯЧ (опционально)
+  if (target.id === "ball") {
+ const elapsed = Date.now() - mainBallMoveStartedAt;
+let remaining = mainBallMoveDelay - elapsed;
+
+if (remaining < 0) remaining = 0;
+
+remaining += bonusTime;
+scheduleMainBallMove(remaining);
+  }
+
+  // 🐷 ОБЫЧНАЯ СВИНКА
+  if (target.id === "piggy" && piggyState.active) {
+    piggyState.lifeTime += bonusTime;
+  }
+
+  // 🐷 SURPRISE
+  if (target.id === "surprise-piggy" && surprisePiggyState.active) {
+    surprisePiggyState.lifeTime += bonusTime;
+  }
+
+  // 🧬 КЛОН СВИНКИ
+  if (target.classList.contains("clone-piggy")) {
+    let lifeTime = parseInt(target.dataset.lifeTime || "0", 10);
+    if (lifeTime > 0) {
+      lifeTime += bonusTime;
+      target.dataset.lifeTime = lifeTime.toString();
+    }
+  }
+
+  // 🧬 КЛОН SURPRISE
+  if (target.classList.contains("clone-surprise-piggy")) {
+    let lifeTime = parseInt(target.dataset.lifeTime || "0", 10);
+    if (lifeTime > 0) {
+      lifeTime += bonusTime;
+      target.dataset.lifeTime = lifeTime.toString();
+    }
+  }
+
+// ❄️ ВИЗУАЛ
+const pos = getElementCenter(target);
+if (pos) {
+  spawnFloatingText("❄️", pos.x, pos.y - 25, "freeze");
+}
+
+// ❄️ Лёгкий freeze-эффект
+target.classList.add("freeze-effect");
+
+setTimeout(() => {
+  target.classList.remove("freeze-effect");
+}, 200);
+}
+
  function applyTelekinesis(sourceElement, sourceEvent) {
   if ((data.lvls.telekinesis || 0) <= 0) return;
 
@@ -3453,6 +4002,7 @@ function getAutoClickTarget() {
   const targetPos = getElementCenter(target);
   if (!targetPos) return;
 
+  playSound(sounds.telekinesis, 0.2, false);
   playTelekinesisImpact(target);
 
   const equipBonuses = [0, 2, 5, 10];
@@ -3603,28 +4153,31 @@ function getAutoClickTarget() {
 
   const ballType = target?.dataset?.ballType || "normal";
 
-  if (ballType === "gold") {
-    sClick += p;
+ if (ballType === "gold") {
+  sClick += p;
+  sTeleXP += p;
 
-    let amount = 1;
-    sCoins += amount;
-    sBallCoins += amount;
-    sGoldCoins += amount;
+  let amount = 1;
+  sCoins += amount;
+  sBallCoins += amount;
+  sGoldCoins += amount;
+  sTeleCoins += amount;
+  console.log("TELE GOLD COINS", sTeleCoins);
 
-    spawnFloatingText(
-      "+" + p,
-      targetPos.x + 10,
-      targetPos.y + 5,
-      "xp"
-    );
-    spawnFloatingText(
-      "+" + amount,
-      targetPos.x + 28,
-      targetPos.y - 6,
-      "coin"
-    );
-    return;
-  }
+  spawnFloatingText(
+    "+" + p,
+    targetPos.x + 10,
+    targetPos.y + 5,
+    "xp"
+  );
+  spawnFloatingText(
+    "+" + amount,
+    targetPos.x + 28,
+    targetPos.y - 6,
+    "coin"
+  );
+  return;
+}
 
   if (ballType === "fire") {
     const oldP = p;
@@ -3644,69 +4197,77 @@ function getAutoClickTarget() {
     return;
   }
 
-  if (ballType === "combo") {
-    const oldP = p;
-    p *= 3;
-    const bonusXP = p - oldP;
-
-    sClick += p;
-    sBallXP += bonusXP;
-    sComboXP += bonusXP;
-
-    let amount = 1;
-    sCoins += amount;
-    sBallCoins += amount;
-    sComboCoins += amount;
-
-    sGems += amount;
-    sBallGems += amount;
-    sComboGems += amount;
-
-    spawnFloatingText(
-      "+" + p,
-      targetPos.x + 10,
-      targetPos.y + 5,
-      "xp"
-    );
-    spawnFloatingText(
-      "+" + amount,
-      targetPos.x + 28,
-      targetPos.y - 6,
-      "coin"
-    );
-    spawnFloatingText(
-      "+" + amount + " 💎",
-      targetPos.x + 40,
-      targetPos.y + 14,
-      "xp"
-    );
-    return;
-  }
-
-  if (ballType === "crystal") {
-    sClick += p;
-
-    let amount = 1;
-    sGems += amount;
-    sBallGems += amount;
-    sCrystalGems += amount;
-
-    spawnFloatingText(
-      "+" + p,
-      targetPos.x + 10,
-      targetPos.y + 5,
-      "xp"
-    );
-    spawnFloatingText(
-      "+" + amount + " 💎",
-      targetPos.x + 28,
-      targetPos.y - 6,
-      "xp"
-    );
-    return;
-  }
+if (ballType === "combo") {
+  const oldP = p;
+  p *= 3;
+  const bonusXP = p - oldP;
 
   sClick += p;
+  sBallXP += bonusXP;
+  sComboXP += bonusXP;
+  sTeleXP += p;
+
+  let amount = 1;
+  sCoins += amount;
+  sBallCoins += amount;
+  sComboCoins += amount;
+  sTeleCoins += amount;
+
+  sGems += amount;
+  sBallGems += amount;
+  sComboGems += amount;
+  sTeleGems += amount;
+
+  spawnFloatingText(
+    "+" + p,
+    targetPos.x + 10,
+    targetPos.y + 5,
+    "xp"
+  );
+  spawnFloatingText(
+    "+" + amount,
+    targetPos.x + 28,
+    targetPos.y - 6,
+    "coin"
+  );
+  spawnFloatingText(
+    "+" + amount + " 💎",
+    targetPos.x + 40,
+    targetPos.y + 14,
+    "xp"
+  );
+  return;
+}
+
+if (ballType === "crystal") {
+  sClick += p;
+  sTeleXP += p;
+
+  let amount = 1;
+  sGems += amount;
+  sBallGems += amount;
+  sCrystalGems += amount;
+  sTeleGems += amount;
+
+  console.log("TELE CRYSTAL GEMS", sTeleGems, target?.dataset?.ballType, target);
+
+  spawnFloatingText(
+    "+" + p,
+    targetPos.x + 10,
+    targetPos.y + 5,
+    "xp"
+  );
+  spawnFloatingText(
+    "+" + amount + " 💎",
+    targetPos.x + 28,
+    targetPos.y - 6,
+    "xp"
+  );
+  return;
+}
+
+  sClick += p;
+  sTeleXP += p;
 
   spawnFloatingText(
     "+" + p,
@@ -3717,6 +4278,7 @@ function getAutoClickTarget() {
 }
 
 function playShockwaveRing(x, y) {
+  playSound(sounds.shockwave, 0.4, false);
   const ring = document.getElementById("shockwave-ring");
   const field = document.getElementById("game-screen");
   if (!ring || !field) return;
@@ -3902,11 +4464,13 @@ function applyShockwaveHitToTarget(target) {
 
   if (ballType === "gold") {
     sClick += p;
+sTeleXP += p;
 
-    let amount = 1;
-    sCoins += amount;
-    sBallCoins += amount;
-    sGoldCoins += amount;
+let amount = 1;
+sCoins += amount;
+sBallCoins += amount;
+sGoldCoins += amount;
+sTeleCoins += amount;
 
     if (targetPos) {
       spawnFloatingText("+" + p, targetPos.x + 10, targetPos.y + 5, "xp");
@@ -3921,8 +4485,9 @@ function applyShockwaveHitToTarget(target) {
     const bonusXP = p - oldP;
 
     sClick += p;
-    sBallXP += bonusXP;
-    sFireXP += bonusXP;
+sBallXP += bonusXP;
+sFireXP += bonusXP;
+sTeleXP += p;
 
     if (targetPos) {
       spawnFloatingText("+" + p, targetPos.x + 10, targetPos.y + 5, "xp");
@@ -3936,17 +4501,20 @@ function applyShockwaveHitToTarget(target) {
     const bonusXP = p - oldP;
 
     sClick += p;
-    sBallXP += bonusXP;
-    sComboXP += bonusXP;
+sBallXP += bonusXP;
+sComboXP += bonusXP;
+sTeleXP += p;
 
-    let amount = 1;
-    sCoins += amount;
-    sBallCoins += amount;
-    sComboCoins += amount;
+let amount = 1;
+sCoins += amount;
+sBallCoins += amount;
+sComboCoins += amount;
+sTeleCoins += amount;
 
-    sGems += amount;
-    sBallGems += amount;
-    sComboGems += amount;
+sGems += amount;
+sBallGems += amount;
+sComboGems += amount;
+sTeleGems += amount;
 
     if (targetPos) {
       spawnFloatingText("+" + p, targetPos.x + 10, targetPos.y + 5, "xp");
@@ -3958,11 +4526,13 @@ function applyShockwaveHitToTarget(target) {
 
   if (ballType === "crystal") {
     sClick += p;
+sTeleXP += p;
 
-    let amount = 1;
-    sGems += amount;
-    sBallGems += amount;
-    sCrystalGems += amount;
+let amount = 1;
+sGems += amount;
+sBallGems += amount;
+sCrystalGems += amount;
+sTeleGems += amount;
 
     if (targetPos) {
       spawnFloatingText("+" + p, targetPos.x + 10, targetPos.y + 5, "xp");
@@ -4092,11 +4662,22 @@ document.addEventListener("mousemove", (e) => {
 });
 
       function startGame() {
+
+        playMusic("game");
+        
+
+Object.values(sounds).forEach(s => {
+  s.play().then(() => {
+    s.pause();
+    s.currentTime = 0;
+  }).catch(() => {});
+});
+
         if (data.lvls.friend > 0) {
           startFriend();
         }
         sClick = sFriend = sFooty = sCoins = sLuckCoins = sGems = totalEl = xpForCoin = personalXpForGem =
-        sBallXP = sBallCoins = sBallGems = sSpecialCritXP = sPiggyCoins = sPiggyGems =
+        sBallXP = sBallCoins = sBallGems = sSpecialCritXP = sPiggyCoins = sPiggyGems = sTeleXP = sTeleCoins = sTeleGems =
         sFireXP = sComboXP = sGoldCoins = sComboCoins = sCrystalGems = sComboGems =
         sPersonalRewardGems = sRewardCoins = sMidasCoins = sVipGems = sCrystalTimeGems = actualViewerCount = 0;
 
@@ -4108,6 +4689,10 @@ document.addEventListener("mousemove", (e) => {
   piggyState.lifeTime = 0;
   stopReflex();
   clearShockwaveTimeouts();
+  clonePiggies.forEach((p) => p.remove());
+  cloneSurprisePiggies.forEach((p) => p.remove());
+  clonePiggies = [];
+  cloneSurprisePiggies = [];
 
   const shockwaveRing = document.getElementById("shockwave-ring");
 if (shockwaveRing) {
@@ -4138,6 +4723,7 @@ if (shockwaveRing) {
         }
 
         updateViewersDisplay();
+        updateKiosks();
 
         const mainBall = document.getElementById("ball");
         if (mainBall) {
@@ -4146,11 +4732,7 @@ if (shockwaveRing) {
 
         updateMultiBalls();
 
-        const ballStayTime = 750 + (data.lvls.reaction || 0) * 250;
-
-        ballMoveInterval = setInterval(() => {
-          moveAllBallsToRandomPositions();
-        }, ballStayTime);
+        scheduleMainBallMove(getMainBallLifeTime());
 
         extraBallSpawnInterval = setInterval(() => {
           trySpawnExtraBall();
@@ -4174,6 +4756,10 @@ surprisePiggySpawnInterval = setInterval(() => {
 
 surprisePiggyLifeInterval = setInterval(() => {
   updateSurprisePiggyLife();
+}, 100);
+
+cloneLifeInterval = setInterval(() => {
+  updateClonePiggiesLife();
 }, 100);
 
 startReflex();
@@ -4263,6 +4849,9 @@ if (Math.random() * 100 < data.lvls.fCrit * 10) {
       }
 
 function handleKick(event) {
+
+
+
   let ball = event.currentTarget;
 
   if (ball) {
@@ -4270,8 +4859,11 @@ function handleKick(event) {
     ball.style.setProperty("--angle", randomDeg + "deg");
   }
 
+  
+
   const clickedBall = event.currentTarget;
   const ballType = clickedBall?.dataset?.ballType || "normal";
+  playSound(sounds.kick, 0.15);
 
   const equipBonuses = [0, 2, 5, 10];
   let p = data.lvls.click + (equipBonuses[data.lvls.equip] || 0);
@@ -4300,6 +4892,7 @@ function handleKick(event) {
     piggyState.hp -= p;
 
     if (piggyState.hp <= 0) {
+      playSound(sounds.piggyBreak, 0.35, false);
   const shockwavePos = getElementCenter(clickedBall);
 
   sCoins += piggyState.reward;
@@ -4338,6 +4931,8 @@ function handleKick(event) {
 }
 
     } else {
+
+      playSound(sounds.piggyHit, 0.2);
       updatePiggySprite();
       updatePiggyHpBar();
       spawnFloatingText(
@@ -4360,15 +4955,73 @@ function handleKick(event) {
     if (scoreEl) scoreEl.innerText = Math.floor(totalNow);
     if (coinsEl) coinsEl.innerText = `🟡 ${Math.floor(sCoins)}`;
 
+    tryCloneTarget(clickedBall);
+    applyFreezing(clickedBall, event);
     applyTelekinesis(clickedBall, event);
 
     return;
   }
+  if (clickedBall && clickedBall.classList.contains("clone-piggy") && clickedBall.style.display === "block") {
+  let hp = parseInt(clickedBall.dataset.hp || "0", 10);
+  let reward = parseInt(clickedBall.dataset.reward || "0", 10);
+
+  hp -= p;
+
+  if (hp <= 0) {
+    const shockwavePos = getElementCenter(clickedBall);
+    playSound(sounds.piggyBreak, 0.35, false);
+    sCoins += reward;
+    sPiggyCoins += reward;
+
+    spawnFloatingText(
+      "PIGGY BROKEN!",
+      event.clientX,
+      event.clientY - 20,
+      "crit",
+    );
+
+    setTimeout(() => {
+      spawnFloatingText(
+        "🟡 +" + reward,
+        event.clientX + 35,
+        event.clientY + 15,
+        "piggyCoin",
+      );
+    }, 120);
+
+    clickedBall.style.display = "none";
+    clickedBall.dataset.ballIndex = "-1";
+    if (shockwavePos) {
+  startShockwave(shockwavePos.x, shockwavePos.y, clickedBall);
+}
+  } else {
+    playSound(sounds.piggyHit, 0.2);
+    clickedBall.dataset.hp = hp.toString();
+
+    spawnFloatingText(
+      "-" + p,
+      event.clientX,
+      event.clientY - 10,
+      isCrit ? "crit" : "xp",
+    );
+
+    clickedBall.style.transform = "translate(-50%, -50%) scale(0.92)";
+    setTimeout(() => {
+      clickedBall.style.transform = "translate(-50%, -50%) scale(1)";
+    }, 90);
+  }
+
+  refreshMatchRuntimeUI();
+  applyFreezing(clickedBall, event);
+  applyTelekinesis(clickedBall, event);
+  return;
+}
 
   if (clickedBall && clickedBall.id === "surprise-piggy" && surprisePiggyState.active) {
     surprisePiggyState.hp -= p;
 
     if (surprisePiggyState.hp <= 0) {
+      playSound(sounds.piggyBreak, 0.4, false);
       const shockwavePos = getElementCenter(clickedBall);
       sCoins += surprisePiggyState.coinReward;
       sGems += surprisePiggyState.gemReward;
@@ -4418,6 +5071,7 @@ function handleKick(event) {
 }
 
     } else {
+      playSound(sounds.piggyHit, 0.22);
       updateSurprisePiggySprite();
       updateSurprisePiggyHpBar();
 
@@ -4441,9 +5095,80 @@ function handleKick(event) {
     if (scoreEl) scoreEl.innerText = Math.floor(totalNow);
     if (coinsEl) coinsEl.innerText = `🟡 ${Math.floor(sCoins)}`;
 
+
+    tryCloneTarget(clickedBall);
+    applyFreezing(clickedBall, event);
     applyTelekinesis(clickedBall, event);
     return;
   }
+
+  if (clickedBall && clickedBall.classList.contains("clone-surprise-piggy") && clickedBall.style.display === "block") {
+  let hp = parseInt(clickedBall.dataset.hp || "0", 10);
+  let coinReward = parseInt(clickedBall.dataset.coinReward || "0", 10);
+  let gemReward = parseInt(clickedBall.dataset.gemReward || "0", 10);
+
+  hp -= p;
+
+  if (hp <= 0) {
+    const shockwavePos = getElementCenter(clickedBall);
+    playSound(sounds.piggyBreak, 0.4, false);
+    sCoins += coinReward;
+    sGems += gemReward;
+    sPiggyCoins += coinReward;
+    sPiggyGems += gemReward;
+
+    spawnFloatingText(
+      "SURPRISE!",
+      event.clientX,
+      event.clientY - 20,
+      "tele",
+    );
+
+    setTimeout(() => {
+      spawnFloatingText(
+        "🟡 +" + coinReward,
+        event.clientX + 35,
+        event.clientY + 10,
+        "piggyCoin",
+      );
+    }, 120);
+
+    setTimeout(() => {
+      spawnFloatingText(
+        "💎 +" + gemReward,
+        event.clientX + 70,
+        event.clientY + 30,
+        "piggyGem",
+      );
+    }, 220);
+
+    clickedBall.style.display = "none";
+    clickedBall.dataset.ballIndex = "-1";
+    if (shockwavePos) {
+  startShockwave(shockwavePos.x, shockwavePos.y, clickedBall);
+}
+  } else {
+    playSound(sounds.piggyHit, 0.22);
+    clickedBall.dataset.hp = hp.toString();
+
+    spawnFloatingText(
+      "-" + p,
+      event.clientX,
+      event.clientY - 10,
+      isCrit ? "crit" : "xp",
+    );
+
+    clickedBall.style.transform = "translate(-50%, -50%) scale(0.92)";
+    setTimeout(() => {
+      clickedBall.style.transform = "translate(-50%, -50%) scale(1)";
+    }, 90);
+  }
+
+  refreshMatchRuntimeUI();
+  applyFreezing(clickedBall, event);
+  applyTelekinesis(clickedBall, event);
+  return;
+}
 
   const isSpecialBall =
     ballType === "gold" ||
@@ -4469,11 +5194,13 @@ function handleKick(event) {
   }
 
   if (ballType === "gold") {
+    playSound(sounds.gold, 0.25);
     let amount = isSpecialCrit ? 3 : 1;
 
     sCoins += amount;
     sBallCoins += amount;
     sGoldCoins += amount;
+    console.log("GOLD HIT", sGoldCoins);
 
     spawnFloatingText(
       "+" + amount,
@@ -4484,6 +5211,7 @@ function handleKick(event) {
   }
 
   if (ballType === "fire") {
+    playSound(sounds.fire, 0.25);
     const oldP = p;
     p *= 3;
     const bonusXP = p - oldP;
@@ -4501,6 +5229,7 @@ function handleKick(event) {
   }
 
   if (ballType === "combo") {
+    playSound(sounds.combo, 0.3);
     const oldP = p;
     p *= 3;
     const bonusXP = p - oldP;
@@ -4542,11 +5271,13 @@ function handleKick(event) {
   }
 
   if (ballType === "crystal") {
+    playSound(sounds.crystal, 0.3);
     let amount = isSpecialCrit ? 3 : 1;
 
     sGems += amount;
     sBallGems += amount;
     sCrystalGems += amount;
+    console.log("CRYSTAL HIT", sCrystalGems);
 
     spawnFloatingText(
       "+" + amount + " 💎",
@@ -4676,260 +5407,242 @@ function handleKick(event) {
     }
   }
 
+  tryCloneTarget(clickedBall);
+  applyFreezing(clickedBall, event);
   applyTelekinesis(clickedBall, event);
 }
-      function stopGame() {
-        // 1. Остановка таймеров
-        clearInterval(ballMoveInterval);
-        clearInterval(gInt);
-        clearInterval(aInt);
-        clearInterval(extraBallSpawnInterval);
-        clearInterval(extraBallLifeInterval);
-        clearInterval(piggySpawnInterval);
-        clearInterval(piggyLifeInterval);
-        clearInterval(surprisePiggySpawnInterval);
-        clearInterval(surprisePiggyLifeInterval);
-        stopReflex();
-        clearShockwaveTimeouts();
 
-        const shockwaveRing = document.getElementById("shockwave-ring");
-if (shockwaveRing) {
-  shockwaveRing.classList.remove("active");
+function showEl(id, display = "flex") {
+  const el = document.getElementById(id);
+  if (el) el.style.display = display;
 }
 
+function hideEl(id) {
+  const el = document.getElementById(id);
+  if (el) el.style.display = "none";
+}
 
-const piggy = document.getElementById("piggy");
-if (piggy) piggy.style.display = "none";
+  function stopGame() {
+  clearTimeout(mainBallMoveTimeout);
+  clearInterval(ballMoveInterval);
+  clearInterval(gInt);
+  clearInterval(aInt);
+  clearInterval(extraBallSpawnInterval);
+  clearInterval(extraBallLifeInterval);
+  clearInterval(piggySpawnInterval);
+  clearInterval(piggyLifeInterval);
+  clearInterval(surprisePiggySpawnInterval);
+  clearInterval(surprisePiggyLifeInterval);
+  stopReflex();
+  clearShockwaveTimeouts();
+  clearInterval(cloneLifeInterval);
 
-const surprisePiggy = document.getElementById("surprise-piggy");
-if (surprisePiggy) surprisePiggy.style.display = "none";
+  clonePiggies.forEach((p) => p.remove());
+  cloneSurprisePiggies.forEach((p) => p.remove());
+  clonePiggies = [];
+  cloneSurprisePiggies = [];
 
-piggyState.active = false;
-piggyState.hp = 0;
-piggyState.maxHp = 0;
-piggyState.reward = 0;
-piggyState.spawnTime = 0;
-piggyState.lifeTime = 0;
+  playMusic("menu");
 
-    surprisePiggyState.active = false;
-    surprisePiggyState.hp = 0;
-    surprisePiggyState.maxHp = 0;
-    surprisePiggyState.coinReward = 0;
-    surprisePiggyState.gemReward = 0;
-    surprisePiggyState.spawnTime = 0;
-    surprisePiggyState.lifeTime = 0;
+  const shockwaveRing = document.getElementById("shockwave-ring");
+  if (shockwaveRing) shockwaveRing.classList.remove("active");
 
-    updatePiggySprite();
-    updateSurprisePiggySprite();
+  const piggy = document.getElementById("piggy");
+  if (piggy) piggy.style.display = "none";
 
-    updatePiggyHpBar();
-    updateSurprisePiggyHpBar();
+  const surprisePiggy = document.getElementById("surprise-piggy");
+  if (surprisePiggy) surprisePiggy.style.display = "none";
 
-        extraBalls.forEach((ball) => ball.remove());
-        extraBalls = [];
-        currentExtraBallIndexes = [];
-        currentMainBallIndex = -1;
-        const viewersContainer = document.getElementById("viewers-container");
-        if (viewersContainer) viewersContainer.innerHTML = "";
-        // 2. Считаем людей (Зрители и Фанаты)
-        let vC = actualViewerCount || 0;
-        let fC = (data.lvls.fan || 0) + (data.lvls.fSec || 0) * 10;
-        let totalPeople = vC + fC;
+  piggyState.active = false;
+  piggyState.hp = 0;
+  piggyState.maxHp = 0;
+  piggyState.reward = 0;
+  piggyState.spawnTime = 0;
+  piggyState.lifeTime = 0;
 
-        let vipChance = [0, 30, 60, 90][data.lvls.vip || 0] || 0;
+  surprisePiggyState.active = false;
+  surprisePiggyState.hp = 0;
+  surprisePiggyState.maxHp = 0;
+  surprisePiggyState.coinReward = 0;
+  surprisePiggyState.gemReward = 0;
+  surprisePiggyState.spawnTime = 0;
+  surprisePiggyState.lifeTime = 0;
 
-        if (Math.random() * 100 < vipChance) {
-          sGems += 3;
-          sVipGems += 3;
-        }
-        // 3. Базовый доход (Билеты)
-        let cBase = totalPeople * 2;
+  updatePiggySprite();
+  updateSurprisePiggySprite();
+  updatePiggyHpBar();
+  updateSurprisePiggyHpBar();
 
-        clearInterval(friendAnimationInterval);
-        friendAnimationInterval = null;
+  extraBalls.forEach((ball) => ball.remove());
+  extraBalls = [];
+  currentExtraBallIndexes = [];
+  currentMainBallIndex = -1;
 
-        document.getElementById("friend-animation").style.display = "none";
-        // 5. Дополнительный доход (Напитки и Атрибутика)
-        let drinkMoney = 0;
-        let attrMoney = 0;
-        let dCh = [0, 30, 60, 90][data.lvls.drink || 0] || 0;
-        let aCh = [0, 10, 20, 30][data.lvls.attr || 0] || 0;
+  const viewersContainer = document.getElementById("viewers-container");
+  if (viewersContainer) viewersContainer.innerHTML = "";
 
-        // Считаем напитки (пьют все)
-        for (let i = 0; i < totalPeople; i++) {
-          if (Math.random() * 100 < dCh) drinkMoney++;
-        }
-        // Считаем атрибутику (только фанаты)
-        for (let i = 0; i < fC; i++) {
-          if (Math.random() * 100 < aCh) attrMoney += 3;
-        }
+  let vC = actualViewerCount || 0;
+  let fC = (data.lvls.fan || 0) + (data.lvls.fSec || 0) * 10;
+  let totalPeople = vC + fC;
 
-        // Общий бонус для вывода в старую строку (если нужно)
-        let cExtra = drinkMoney + attrMoney;
+  let vipChance = [0, 30, 60, 90][data.lvls.vip || 0] || 0;
+  if (Math.random() * 100 < vipChance) {
+    sGems += 3;
+    sVipGems += 3;
+  }
 
-        // 6. Итоговые расчеты
-        let crystalTimeThresholds = [0, 18, 17, 16];
-let crystalTimeNeed = crystalTimeThresholds[data.lvls.crystalTime || 0] || 0;
+  let cBase = totalPeople * 2;
 
-if (crystalTimeNeed > 0) {
+  clearInterval(friendAnimationInterval);
+  friendAnimationInterval = null;
+
+  const friendAnim = document.getElementById("friend-animation");
+  if (friendAnim) friendAnim.style.display = "none";
+
+  let drinkMoney = 0;
+  let attrMoney = 0;
+  let dCh = [0, 30, 60, 90][data.lvls.drink || 0] || 0;
+  let aCh = [0, 10, 20, 30][data.lvls.attr || 0] || 0;
+
+  for (let i = 0; i < totalPeople; i++) {
+    if (Math.random() * 100 < dCh) drinkMoney++;
+  }
+
+  for (let i = 0; i < fC; i++) {
+    if (Math.random() * 100 < aCh) attrMoney += 3;
+  }
+
+  let cExtra = drinkMoney + attrMoney;
+
+  let crystalTimeThresholds = [0, 18, 17, 16];
+  let crystalTimeNeed = crystalTimeThresholds[data.lvls.crystalTime || 0] || 0;
+
+  if (crystalTimeNeed > 0) {
     let totalSeconds = Math.floor(totalEl / 1000);
     let extraSeconds = totalSeconds - crystalTimeNeed;
 
     if (extraSeconds > 0) {
-        sGems += extraSeconds;
-        sCrystalTimeGems += extraSeconds;
+      sGems += extraSeconds;
+      sCrystalTimeGems += extraSeconds;
     }
+  }
+
+  let totalXP = Math.floor(sClick + sFriend + sFooty + sBallXP);
+  let totalMatchCoins = sCoins + cBase + cExtra;
+  let totalMatchGems = sGems;
+
+  const setVal = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.innerText = val;
+  };
+
+  setVal("res-time", (totalEl / 1000).toFixed(1) + "s");
+  setVal("res-visitors", totalPeople);
+
+  setVal("res-xp-total", totalXP);
+  setVal("res-xp-click", Math.floor(sClick));
+  setVal("res-xp-friend", Math.floor(sFriend));
+  setVal("res-xp-footy", Math.floor(sFooty));
+  setVal("res-xp-fire", Math.floor(sFireXP));
+  setVal("res-xp-combo", Math.floor(sComboXP));
+  setVal("res-xp-tele", Math.floor(sTeleXP));
+
+  setVal("res-coin-total", totalMatchCoins);
+  setVal("res-coin-base", cBase);
+  setVal("res-coin-luck", Math.floor(sLuckCoins));
+  setVal("res-coin-midas", Math.floor(sMidasCoins));
+  setVal("res-coin-reward", Math.floor(sRewardCoins));
+  setVal("res-coin-gold", Math.floor(sGoldCoins));
+  setVal("res-coin-combo", Math.floor(sComboCoins));
+  setVal("res-coin-piggy", Math.floor(sPiggyCoins));
+  setVal("res-coin-tele", Math.floor(sTeleCoins));
+  setVal("res-coin-drink", drinkMoney);
+  setVal("res-coin-attr", attrMoney);
+
+  setVal("res-gem-crystal", Math.floor(sCrystalGems));
+  setVal("res-gem-combo", Math.floor(sComboGems));
+  setVal("res-gem-vip", Math.floor(sVipGems));
+  setVal("res-gem-time", Math.floor(sCrystalTimeGems));
+  setVal("res-gem-personal", Math.floor(sPersonalRewardGems));
+  setVal("res-gem-piggy", Math.floor(sPiggyGems));
+  console.log("STOPGAME sTeleGems =", sTeleGems);
+  setVal("res-gem-tele", Math.floor(sTeleGems));
+  setVal("res-gem-total", Math.floor(totalMatchGems));
+
+  data.xp += totalXP;
+  data.coins += totalMatchCoins;
+  data.gems += totalMatchGems;
+  updateUI();
+
+  if (sFireXP > 0) showEl("row-res-fire-xp");
+  if (sComboXP > 0) showEl("row-res-combo-xp");
+  if (data.lvls.friend > 0) showEl("row-res-friend-xp");
+  if (data.lvls.footy > 0) showEl("row-res-footy-xp");
+  if (sTeleXP > 0) showEl("row-res-tele-xp");
+
+  if (data.lvls.viewer > 0 || data.lvls.vStand > 0 || data.lvls.fan > 0) {
+    showEl("summary-coin-col", "block");
+    showEl("row-res-base");
+    showEl("row-res-visitors", "inline");
+  }
+
+  if (sLuckCoins > 0) {
+    showEl("summary-coin-col", "block");
+    showEl("row-res-luck");
+  }
+
+  if (sMidasCoins > 0) {
+    showEl("summary-coin-col", "block");
+    showEl("row-res-midas");
+  }
+
+  if (sRewardCoins > 0) {
+    showEl("summary-coin-col", "block");
+    showEl("row-res-reward");
+  }
+
+  if (sGoldCoins > 0) {
+    showEl("summary-coin-col", "block");
+    showEl("row-res-gold-coin");
+  }
+
+  if (sComboCoins > 0) {
+    showEl("summary-coin-col", "block");
+    showEl("row-res-combo-coin");
+  }
+
+  if (sPiggyCoins > 0) {
+    showEl("summary-coin-col", "block");
+    showEl("row-res-piggy-coin");
+  }
+
+  if (sTeleCoins > 0) {
+    showEl("summary-coin-col", "block");
+    showEl("row-res-tele-coin");
+  }
+
+  if (data.lvls.drink > 0) showEl("row-res-drink");
+  if (data.lvls.attr > 0) showEl("row-res-attr");
+
+  if (totalMatchGems > 0) {
+    showEl("summary-gem-col", "block");
+
+    if (sPiggyGems > 0) showEl("row-res-gem-piggy");
+    if (sCrystalGems > 0) showEl("row-res-gem-crystal");
+    if (sComboGems > 0) showEl("row-res-gem-combo");
+    if (sVipGems > 0) showEl("row-res-gem-vip");
+    if (sCrystalTimeGems > 0) showEl("row-res-gem-time");
+    if (sPersonalRewardGems > 0) showEl("row-res-gem-personal");
+    if (sTeleGems > 0) showEl("row-res-gem-tele");
+
+    showEl("row-res-total-gem");
+  }
+
+  if (totalMatchCoins > 0) showEl("row-res-total-coin");
+
+  const overlay = document.getElementById("summary-overlay");
+  if (overlay) overlay.style.display = "flex";
 }
-
-let totalXP = Math.floor(sClick + sFriend + sFooty + sBallXP);
-let totalMatchCoins = sCoins + cBase + cExtra ;
-let totalMatchGems = sGems;
-
-        // 7. Вывод данных в UI (Безопасно проверяем наличие элементов)
-        const setVal = (id, val) => {
-          const el = document.getElementById(id);
-          if (el) el.innerText = val;
-        };
-
-        setVal("res-time", (totalEl / 1000).toFixed(1) + "s");
-        setVal("res-visitors", totalPeople);
-
-        // XP
-        setVal("res-xp-total", totalXP);
-        setVal("res-xp-click", Math.floor(sClick));
-        setVal("res-xp-friend", Math.floor(sFriend));
-        setVal("res-xp-footy", Math.floor(sFooty));
-        setVal("res-xp-fire", Math.floor(sFireXP));
-        setVal("res-xp-combo", Math.floor(sComboXP));
-
-        if (sFireXP > 0) {
-          document.getElementById("row-res-fire-xp").style.display = "flex";
-        }
-        if (sComboXP > 0) {
-          document.getElementById("row-res-combo-xp").style.display = "flex";
-        }
-
-        if (data.lvls.friend > 0) {
-          document.getElementById("row-res-friend-xp").style.display = "flex";
-        }
-
-        if (data.lvls.footy > 0) {
-          document.getElementById("row-res-footy-xp").style.display = "flex";
-        }
-      
-        // Монеты
-        setVal("res-coin-total", totalMatchCoins);
-        setVal("res-coin-base", cBase);
-        setVal("res-coin-luck", Math.floor(sLuckCoins));
-        setVal("res-coin-midas", Math.floor(sMidasCoins));
-        setVal("res-coin-reward", Math.floor(sRewardCoins));
-        setVal("res-coin-gold", Math.floor(sGoldCoins));
-        setVal("res-coin-combo", Math.floor(sComboCoins));
-        setVal("res-coin-piggy", Math.floor(sPiggyCoins));
-
-        // Бонусы по отдельности
-        setVal("res-coin-drink", drinkMoney);
-        setVal("res-coin-attr", attrMoney);
-        // Гемы
-        setVal("res-gem-crystal", Math.floor(sCrystalGems));
-        setVal("res-gem-combo", Math.floor(sComboGems));
-        setVal("res-gem-vip", Math.floor(sVipGems));
-        setVal("res-gem-time", Math.floor(sCrystalTimeGems));
-        setVal("res-gem-personal", Math.floor(sPersonalRewardGems));
-        setVal("res-gem-total", Math.floor(totalMatchGems));
-        setVal("res-gem-piggy", Math.floor(sPiggyGems));
-        // 8. Сохранение прогресса
-        data.xp += totalXP;
-        data.coins += totalMatchCoins;
-        data.gems += totalMatchGems;
-        updateUI();
-        // --- ЛОГИКА ДИНАМИЧЕСКОГО ОКНА ---
-
-        // 1. Показываем Билеты, если куплены Зрители или Трибуны
-        if (data.lvls.viewer > 0 || data.lvls.vStand > 0 || data.lvls.fan > 0) {
-          document.getElementById("summary-coin-col").style.display = "block";
-          document.getElementById("row-res-base").style.display = "flex";
-          document.getElementById("row-res-visitors").style.display = "inline";
-        }
-
-        if (sLuckCoins > 0) {
-        document.getElementById("summary-coin-col").style.display = "block";
-        document.getElementById("row-res-luck").style.display = "flex";
-   }
-        if (sMidasCoins > 0) {
-          document.getElementById("summary-coin-col").style.display = "block";
-          document.getElementById("row-res-midas").style.display = "flex";
-        }
-        if (sRewardCoins > 0) {
-          document.getElementById("summary-coin-col").style.display = "block";
-          document.getElementById("row-res-reward").style.display = "flex";
-        }
-        if (sGoldCoins > 0) {
-          document.getElementById("summary-coin-col").style.display = "block";
-          document.getElementById("row-res-gold-coin").style.display = "flex";
-        }
-        if (sComboCoins > 0) {
-          document.getElementById("summary-coin-col").style.display = "block";
-          document.getElementById("row-res-combo-coin").style.display = "flex";
-        }
-        if (sPiggyCoins > 0) {
-          document.getElementById("summary-coin-col").style.display = "block";
-          document.getElementById("row-res-piggy-coin").style.display = "flex";
-}
-
-
-
-
-        // 3. Показываем Напитки
-        if (data.lvls.drink > 0) {
-          document.getElementById("row-res-drink").style.display = "flex";
-        }
-
-        // 4. Показываем Атрибутику
-        if (data.lvls.attr > 0) {
-          document.getElementById("row-res-attr").style.display = "flex";
-        }
-        // 5. Показываем Гемы, если заработано больше 0
-        if (totalMatchGems > 0) {
-    document.getElementById("summary-gem-col").style.display = "block";
-
-    if (sPiggyGems > 0) {
-       document.getElementById("summary-gem-col").style.display = "block";
-       document.getElementById("row-res-gem-piggy").style.display = "flex";
-}
-
-    if (sCrystalGems > 0) {
-        document.getElementById("row-res-gem-crystal").style.display = "flex";
-    }
-
-    if (sComboGems > 0) {
-        document.getElementById("row-res-gem-combo").style.display = "flex";
-    }
-
-    if (sVipGems > 0) {
-        document.getElementById("row-res-gem-vip").style.display = "flex";
-    }
-
-    if (sCrystalTimeGems > 0) {
-        document.getElementById("row-res-gem-time").style.display = "flex";
-    }
-
-    if (sPersonalRewardGems > 0) {
-        document.getElementById("row-res-gem-personal").style.display = "flex";
-    }
-
-    document.getElementById("row-res-total-gem").style.display = "flex";
-}
-        // 5. Показываем Итоговую строку монет, если доход больше 0
-        if (totalMatchCoins > 0) {
-          document.getElementById("row-res-total-coin").style.display = "flex";
-        }
-
-        // 9. Показываем окно результатов
-        const overlay = document.getElementById("summary-overlay");
-        if (overlay) overlay.style.display = "flex";
-      }
-
       function closeSummary() {
         document.getElementById("summary-overlay").style.display = "none";
 
@@ -4959,6 +5672,9 @@ let totalMatchGems = sGems;
           "row-res-gem-time",
           "row-res-piggy-coin",
           "row-res-gem-piggy",
+          "row-res-tele-xp",
+          "row-res-tele-coin",
+          "row-res-tele-gem",
         ];
         idsToHide.forEach((id) => {
           let el = document.getElementById(id);
@@ -5019,6 +5735,18 @@ let totalMatchGems = sGems;
 
         return Math.round(fans + expectedViewers);
       }
+
+      function playMusic(type) {
+  Object.values(music).forEach((m) => {
+    m.pause();
+    m.currentTime = 0;
+  });
+
+  const track = music[type];
+  if (!track) return;
+
+  track.play().catch(() => {});
+}
 
 function updateLiveStats() {
 
@@ -5144,6 +5872,88 @@ if (topBoxLeft && rowTopDamage && rowTopBallLife && rowTopTeam) {
       updateUI();
       renderPlayerPreview();
       setTimeout(centerTreeOnClickNode, 50);
+
+function initCustomizationControls() {
+  const headButtons = document.querySelectorAll(".js-change-head");
+
+  headButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const step = Number(button.dataset.step);
+      changeHead(step);
+    });
+  });
+
+  const colorGrids = document.querySelectorAll(".color-grid");
+
+  colorGrids.forEach((grid) => {
+    grid.addEventListener("click", (event) => {
+      const colorButton = event.target.closest(".color-opt");
+      if (!colorButton) return;
+
+      const part = grid.dataset.part;
+      const color = colorButton.dataset.color;
+
+      updatePartColor(part, color);
+    });
+  });
+
+  const savePlayerButton = document.getElementById("save-player-btn");
+  if (savePlayerButton) {
+    savePlayerButton.addEventListener("click", savePlayerAndStart);
+  }
+}
+
+function initAdminControls() {
+  const adminButtons = document.querySelectorAll(".js-admin-add");
+
+  adminButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const resource = button.dataset.resource;
+      const amount = Number(button.dataset.amount);
+
+      addRes(resource, amount);
+    });
+  });
+}
+
+function initMainButtons() {
+  const startMatchButton = document.getElementById("start-match-btn");
+  if (startMatchButton) {
+    startMatchButton.addEventListener("click", startGame);
+  }
+
+  const closeSummaryButton = document.getElementById("close-summary-btn");
+  if (closeSummaryButton) {
+    closeSummaryButton.addEventListener("click", closeSummary);
+  }
+}
+
+function initGameClickTargets() {
+  const ball = document.getElementById("ball");
+  if (ball) {
+    ball.addEventListener("click", handleKick);
+  }
+
+  const piggy = document.getElementById("piggy");
+  if (piggy) {
+    piggy.addEventListener("click", handleKick);
+  }
+
+  const surprisePiggy = document.getElementById("surprise-piggy");
+  if (surprisePiggy) {
+    surprisePiggy.addEventListener("click", handleKick);
+  }
+}
+
+function initUIRefactorBindings() {
+  initCustomizationControls();
+  initAdminControls();
+  initMainButtons();
+  initGameClickTargets();
+}
+
+document.addEventListener("DOMContentLoaded", initUIRefactorBindings);
+
     </script>
   </body>
 </html>
