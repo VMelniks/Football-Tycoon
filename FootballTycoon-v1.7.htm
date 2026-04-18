@@ -1,0 +1,481 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Football Journey</title>
+ <link rel="stylesheet" href="css/game.css" />
+  </head>
+  <body>
+    <div id="boot-screen" class="boot-screen active">
+  <div class="boot-content">
+    <h1 class="boot-title">FOOTBALL JOURNEY</h1>
+        <img src="match/logo.png" class="boot-logo" />
+    <button id="boot-start-btn" class="boot-start-btn">НАЧАТЬ</button>
+  </div>
+</div>
+<div id="custom-screen" class="screen active">
+  <div class="custom-card">
+    <h2>СОЗДАНИЕ ИГРОКА</h2>
+
+    <div class="preview-box" id="player-preview"></div>
+
+<div class="custom-controls">
+  <div class="control-row">
+    <button class="menu-btn js-change-head" data-step="-1">⬅️</button>
+    <span class="control-label">ГОЛОВА</span>
+    <button class="menu-btn js-change-head" data-step="1">➡️</button>
+  </div>
+
+  <hr class="section-divider" />
+
+  <div class="player-name-block">
+    <div class="color-selection-title">ИМЯ ИГРОКА</div>
+    <input
+      id="player-name-input"
+      class="player-name-input"
+      type="text"
+      maxlength="16"
+      placeholder="Введите имя"
+      value="PLAYER"
+    />
+  </div>
+
+  <div class="flag-selection-block">
+    <div class="color-selection-title">НАЦИОНАЛЬНОСТЬ</div>
+
+    <div class="flag-selector">
+      <button type="button" class="menu-btn js-change-flag" data-step="-1">⬅️</button>
+
+      <div class="flag-preview-box">
+        <img id="selected-flag-preview" class="selected-flag-preview" src="flags/ru.png" alt="flag" />
+        <div id="selected-flag-code" class="selected-flag-code">RU</div>
+      </div>
+
+      <button type="button" class="menu-btn js-change-flag" data-step="1">➡️</button>
+    </div>
+  </div>
+
+  <div class="color-selection-title">ЦВЕТ МАЙКИ</div>
+  <div class="color-grid" data-part="shirtColor">
+    <div class="color-opt" style="background: #fff" data-color="white"></div>
+    <div class="color-opt" style="background: #f00" data-color="red"></div>
+    <div class="color-opt" style="background: #00f" data-color="blue"></div>
+    <div class="color-opt" style="background: #000" data-color="black"></div>
+  </div>
+
+  <div class="color-selection-title">ЦВЕТ ШОРТ</div>
+  <div class="color-grid" data-part="shortsColor">
+    <div class="color-opt" style="background: #fff" data-color="white"></div>
+    <div class="color-opt" style="background: #f00" data-color="red"></div>
+    <div class="color-opt" style="background: #00f" data-color="blue"></div>
+    <div class="color-opt" style="background: #000" data-color="black"></div>
+  </div>
+
+  <div class="color-selection-title">ЦВЕТ ГЕТР</div>
+  <div class="color-grid" data-part="socksColor">
+    <div class="color-opt" style="background: #fff" data-color="white"></div>
+    <div class="color-opt" style="background: #f00" data-color="red"></div>
+    <div class="color-opt" style="background: #00f" data-color="blue"></div>
+    <div class="color-opt" style="background: #000" data-color="black"></div>
+  </div>
+
+  <button
+    id="save-player-btn"
+    class="start-game-btn start-game-btn--full"
+  >
+    СОХРАНИТЬ И ИГРАТЬ
+  </button>
+</div>
+  </div>
+</div>
+
+ <div class="admin-panel" id="admin-ui" style="display: none">
+  <button class="admin-btn js-admin-add" data-resource="xp" data-amount="10000">+10000 XP</button>
+  <button class="admin-btn js-admin-add" data-resource="coins" data-amount="1000">+1000 Coins</button>
+</div>
+    <div id="summary-overlay">
+      <div class="summary-card">
+        <h2 style="color: #2ecc71; margin-top: 0">МАТЧ ЗАВЕРШЕН</h2>
+
+        <div
+          class="summary-row"
+          style="
+            border: none;
+            justify-content: center;
+            gap: 30px;
+            font-size: 1rem;
+            margin-bottom: 20px;
+          "
+        >
+          <span>⏱ Время: <b id="res-time">0s</b></span>
+          <span id="row-res-visitors" style="display: none"
+            >👥 Посетители: <b id="res-visitors">0</b></span
+          >
+        </div>
+
+        <div class="summary-columns">
+          <!-- XP -->
+          <div class="summary-col" id="summary-xp-col">
+            <div class="res-title-xp">🔹 Опыт (XP)</div>
+
+            <div class="summary-row">
+              <span>👆 Клики</span>
+              <span id="res-xp-click">0</span>
+            </div>
+
+            <div
+              class="summary-row"
+              id="row-res-friend-xp"
+              style="display: none"
+            >
+              <span>🐕 Друг</span>
+              <span id="res-xp-friend">0</span>
+            </div>
+
+            <div
+              class="summary-row"
+              id="row-res-footy-xp"
+              style="display: none"
+            >
+              <span>👟 Футболисты</span>
+              <span id="res-xp-footy">0</span>
+            </div>
+
+            <div class="summary-row" id="row-res-fire-xp" style="display: none">
+              <span>🔥 Огненный мяч</span>
+              <span id="res-xp-fire">0</span>
+            </div>
+
+            <div
+              class="summary-row"
+              id="row-res-combo-xp"
+              style="display: none"
+            >
+              <span>⚡ Комбо-мяч</span>
+              <span id="res-xp-combo">0</span>
+            </div>
+            <div class="summary-row" id="row-res-tele-xp" style="display: none">
+  <span>🧠 Телекинез</span>
+  <span id="res-xp-tele">0</span>
+</div>
+
+            <div
+              class="summary-row res-total-row"
+              style="color: #3498db; border-top-color: #3498db"
+            >
+              <b>ВСЕГО XP:</b>
+              <b id="res-xp-total">0</b>
+            </div>
+          </div>
+
+          <!-- COINS -->
+          <div class="summary-col" id="summary-coin-col" style="display: none">
+            <div class="res-title-coin" id="res-section-coin">
+              🟡 Доход (МОНЕТЫ)
+            </div>
+
+            <div class="summary-row" id="row-res-base" style="display: none">
+              <span>🎟️ Билеты</span>
+              <span id="res-coin-base">0</span>
+            </div>
+
+            <div class="summary-row" id="row-res-luck" style="display: none">
+              <span>🍀 Удача</span>
+              <span id="res-coin-luck">0</span>
+            </div>
+            <div class="summary-row" id="row-res-midas" style="display: none">
+              <span>✨ Мидас</span>
+              <span id="res-coin-midas">0</span>
+            </div>
+            <div class="summary-row" id="row-res-reward" style="display: none">
+              <span>🏆 Награда</span>
+              <span id="res-coin-reward">0</span>
+            </div>
+
+            <div
+              class="summary-row"
+              id="row-res-gold-coin"
+              style="display: none"
+            >
+              <span>💰 Золотой мяч</span>
+              <span id="res-coin-gold">0</span>
+            </div>
+
+            <div
+              class="summary-row"
+              id="row-res-combo-coin"
+              style="display: none"
+            >
+              <span>⚡ Комбо-мяч</span>
+              <span id="res-coin-combo">0</span>
+            </div>
+            <div class="summary-row" id="row-res-piggy-coin" style="display: none">
+  <span>🐖 Свинка</span>
+  <span id="res-coin-piggy">0</span>
+</div>
+
+            <div class="summary-row" id="row-res-drink" style="display: none">
+              <span>🥤 Напитки</span>
+              <span id="res-coin-drink">0</span>
+            </div>
+
+            <div class="summary-row" id="row-res-attr" style="display: none">
+              <span>🧣 Атрибутика</span>
+              <span id="res-coin-attr">0</span>
+            </div>
+            <div class="summary-row" id="row-res-tele-coin" style="display: none">
+  <span>🧠 Телекинез</span>
+  <span id="res-coin-tele">0</span>
+</div>
+
+            <div
+              class="summary-row res-total-row"
+              id="row-res-total-coin"
+              style="display: none; color: #f1c40f; border-top-color: #f1c40f"
+            >
+              <b>ВСЕГО МОНЕТ:</b>
+              <b id="res-coin-total" style="font-size: 1.8rem">0</b>
+            </div>
+          </div>
+
+          <!-- GEMS -->
+          <div class="summary-col" id="summary-gem-col" style="display: none">
+            <div class="res-title-gem" id="res-section-gem">💎 Gem</div>
+
+            <div
+              class="summary-row"
+              id="row-res-gem-crystal"
+              style="display: none"
+            >
+              <span>💎 Кристальный мяч</span>
+              <span id="res-gem-crystal">0</span>
+            </div>
+
+            <div
+              class="summary-row"
+              id="row-res-gem-combo"
+              style="display: none"
+            >
+              <span>⚡ Комбо-мяч</span>
+              <span id="res-gem-combo">0</span>
+            </div>
+
+            <div
+              class="summary-row"
+              id="row-res-gem-personal"
+              style="display: none"
+            >
+              <span>🏅 Инд. награда</span>
+              <span id="res-gem-personal">0</span>
+            </div>
+            <div class="summary-row" id="row-res-gem-time" style="display:none;">
+  <span>⏱ Кристальное время</span>
+  <span id="res-gem-time">0</span>
+</div>
+<div class="summary-row" id="row-res-gem-piggy" style="display: none">
+  <span>🐖 Свинка</span>
+  <span id="res-gem-piggy">0</span>
+</div>
+            <div class="summary-row" id="row-res-gem-vip" style="display: none">
+              <span>👑 VIP</span>
+              <span id="res-gem-vip">0</span>
+            </div>
+            <div class="summary-row" id="row-res-gem-tele", style="display: none">
+  <span>🧠 Телекинез</span>
+  <span id="res-gem-tele">0</span>
+</div>
+
+            <div
+              class="summary-row res-total-row"
+              id="row-res-total-gem"
+              style="display: none; color: #6ee7ff; border-top-color: #6ee7ff"
+            >
+              <b>ВСЕГО GEMs:</b>
+              <b id="res-gem-total" style="font-size: 1.8rem">0</b>
+            </div>
+          </div>
+        </div>
+
+        <button id="close-summary-btn" class="menu-btn">В МЕНЮ</button>
+      </div>
+    </div>
+
+    <div class="container">
+   <div id="menu-screen" class="screen active">
+  <div class="currency-bar">
+    <div class="xp-val">🔹 XP: <span id="total-xp">0</span></div>
+    <div class="coin-val">🟡 COINS: <span id="total-coins">0</span></div>
+    <div class="gem-val">💎 GEM: <span id="total-gems">0</span></div>
+  </div>
+
+  <div class="tree-viewport">
+    <div id="tree"></div>
+  </div>
+<div class="player-card-floating">
+  <div class="player-card" id="menu-player-card">
+<div class="player-card-top-left">
+  <div class="player-card-ovr" id="card-ovr">1</div>
+  <img id="card-flag" class="player-card-flag" src="flags/ru.png" alt="flag" />
+</div>
+
+<div class="player-card-avatar">
+  <div class="player-card-preview-manual">
+    <div class="card-shirt" id="card-shirt"></div>
+    <div class="card-head" id="card-head"></div>
+  </div>
+</div>
+
+    <div class="player-card-header" id="player-card-name">PLAYER</div>
+
+    <div class="player-card-stats">
+      <div class="player-stat-row">
+        <span>Сила удара</span>
+        <b id="card-stat-click">1</b>
+      </div>
+      <div class="player-stat-row">
+        <span>Шанс крита</span>
+        <b id="card-stat-crit">0%</b>
+      </div>
+      <div class="player-stat-row">
+        <span>Партнёры</span>
+        <b id="card-stat-team">0</b>
+      </div>
+      <div class="player-stat-row">
+        <span>Реакция</span>
+        <b id="card-stat-reaction">0.75с</b>
+      </div>
+      <div class="player-stat-row">
+        <span>Ос.реакция</span>
+        <b id="card-stat-special-reaction">0.75с</b>
+      </div>
+      <div class="player-stat-row">
+        <span>Рефлексы</span>
+        <b id="card-stat-reflex">0</b>
+      </div>
+    </div>
+  </div>
+</div>
+
+  <button id="start-match-btn" class="start-match-btn">
+    НАЧАТЬ МАТЧ
+  </button>
+</div>
+      <div id="top-stats-ui" class="screen">
+  <div class="top-stats-bar">
+    <div class="top-stat-box" id="top-box-left">
+      <div class="top-stat-line" id="row-top-damage">СИЛА УДАРА: <b id="top-stat-damage">1</b></div>
+      <div class="top-stat-line" id="row-top-team" style="display:none;">ПАРТНЕРЫ: <b id="top-stat-team">0</b></div>
+      <div class="top-stat-line" id="row-top-ball-life">ЖИЗНЬ МЯЧА: <b id="top-stat-ball-life">0.75с</b></div>
+    </div>
+  <div class="top-stat-box" id="top-box-middle" style="display:none;">
+  <div class="top-stat-line" id="row-top-crit" style="display:none;">ШАНС КРИТА: <b id="top-stat-crit">0%</b></div>
+  <div class="top-stat-line" id="row-top-delay" style="display:none;">ШАНС ЗАТЯЖКИ: <b id="top-stat-delay">0%</b></div>
+  <div class="top-stat-line" id="row-top-special-life" style="display:none;">ОСОБЫЙ МЯЧ: <b id="top-stat-special-life">0.75с</b></div>
+</div>
+
+    <div class="top-stat-box" id="top-box-right" style="display:none;">
+      <div class="top-stat-line" id="row-top-people">ОЖИДАЕМО ЛЮДЕЙ: <b id="top-stat-people">0 👥</b></div>
+      <div class="top-stat-line" id="row-top-income">ОЖИДАЕМЫЙ ДОХОД: <b id="top-stat-income">0 🟡</b></div>
+      <div class="top-stat-line" id="row-top-special-crit" style="display:none;">
+  ОСОБЫЙ КРИТ: <b id="top-stat-special-crit">0%</b>
+</div>
+    </div>
+  </div>
+</div>
+    <div id="game-screen" class="screen">
+  <div id="viewers-container"></div>
+  <div id="kiosk-drinks" class="kiosk-item">
+        <img src="match/drinks_kiosk.png" alt="Drinks">
+    </div>
+    <div id="kiosk-attr" class="kiosk-item">
+        <img src="match/attr_kiosk.png" alt="Attributes">
+    </div>
+
+  <div class="stopwatch-container">
+    <img
+      src="match/stopwatch.png"
+      alt="Stopwatch Case"
+      class="stopwatch-case"
+    />
+    <svg viewBox="0 0 100 100" class="stopwatch-arrow-svg">
+      <circle cx="50" cy="60" r="3" fill="#000000" />
+      <line
+        id="stopwatch-hand"
+        x1="50"
+        y1="60"
+        x2="50"
+        y2="30"
+        stroke="#000000"
+        stroke-width="3"
+        stroke-linecap="round"
+      />
+    </svg>
+  </div>
+
+  <div class="timer-container">
+    <div id="timer-text">00:11:00</div>
+    <div id="time-bonus">+1s</div>
+  </div>
+
+  <div id="score-container" style="position: relative; z-index: 10">
+    🔹 <span id="current-score">0</span>
+  </div>
+
+  <div id="ball-container">
+    <img
+  src="match/ball.png"
+  id="ball"
+  alt="Soccer Ball"
+  draggable="false"
+/>
+  </div>
+
+  <img
+  src="match/piggy.png"
+  id="piggy"
+  alt="Piggy"
+  draggable="false"
+/>
+
+  <img
+  src="match/surprisePiggy.png"
+  id="surprise-piggy"
+  alt="Surprise Piggy"
+  draggable="false"
+/>
+
+  <div id="piggy-hp-bar" class="piggy-hp-bar hidden">
+    <div id="piggy-hp-fill" class="piggy-hp-fill"></div>
+  </div>
+
+  <div id="surprise-piggy-hp-bar" class="piggy-hp-bar surprise-hp-bar hidden">
+    <div id="surprise-piggy-hp-fill" class="piggy-hp-fill surprise-hp-fill"></div>
+  </div>
+
+  <div id="shockwave-ring"></div>
+
+  <div
+    id="game-coins"
+    style="
+      color: #f1c40f;
+      font-weight: bold;
+      font-size: 1.5rem;
+      margin-top: 10px;
+      position: relative;
+      z-index: 10;
+      text-align: center;
+    "
+  >
+    🟡 0
+  </div>
+
+  <div id="friend-animation"></div>
+</div>
+
+    <script>
+
+
+    </script>
+    <script src="js/game.js"></script>
+  </body>
+</html>
