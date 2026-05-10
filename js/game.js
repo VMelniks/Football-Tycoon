@@ -244,11 +244,17 @@ function playFriendFrame() {
   div.style.height = `${data.h * scale}px`;
 
   // 🔥 зеркалим
-  div.style.transform = "translate(-50%, -50%) scaleX(-1)";
+  if (currentMode === "competition") {
+    div.style.transform = "translate(-50%, -50%) scaleX(1)";
+  } else {
+    div.style.transform = "translate(-50%, -50%) scaleX(-1)";
+  }
 
   currentFriendFrame++;
 }
 function updateViewersDisplay() {
+  if (currentMode === "competition") return;
+
   const container = document.getElementById("viewers-container");
   if (!container) return;
 
@@ -282,6 +288,7 @@ function updateViewersDisplay() {
 function animateSingleViewer(el, frameIndex) {
   setInterval(
     () => {
+      if (currentMode === "competition") return;
       if (viewerFrames.length === 0 || !viewerAtlasData) return;
 
       frameIndex = (frameIndex + 1) % viewerFrames.length;
@@ -393,6 +400,9 @@ function getRandomFreeBallIndex(usedIndexes = [], forbiddenIndexes = []) {
   return freeIndexes[Math.floor(Math.random() * freeIndexes.length)];
 }
 function rollBallType() {
+  if (currentMode === "competition") {
+    return "normal";
+  }
   const comboChance = [0, 0.5, 1, 1.5][data.lvls.synergy || 0] || 0;
   const fireChance = [0, 3, 6, 9][data.lvls.fireBall || 0] || 0;
   const goldChance = [0, 2, 4, 6][data.lvls.goldBall || 0] || 0;
@@ -1029,12 +1039,18 @@ function updateKiosks() {
   const drinksKiosk = document.getElementById("kiosk-drinks");
   const attrKiosk = document.getElementById("kiosk-attr");
 
-  // Если куплен хотя бы 1 уровень напитков — показываем киоск
+  // ❗ СОСТЯЗАНИЯ — ВСЕГДА СКРЫТО
+  if (currentMode === "competition") {
+    if (drinksKiosk) drinksKiosk.style.display = "none";
+    if (attrKiosk) attrKiosk.style.display = "none";
+    return;
+  }
+
+  // ✅ ОБЫЧНЫЙ РЕЖИМ
   if (drinksKiosk) {
     drinksKiosk.style.display = data.lvls.drink > 0 ? "block" : "none";
   }
 
-  // Если куплен хотя бы 1 уровень атрибутики — показываем киоск
   if (attrKiosk) {
     attrKiosk.style.display = data.lvls.attr > 0 ? "block" : "none";
   }
@@ -1213,6 +1229,33 @@ function spawnFloatingText(text, x, y, type = "xp") {
     0 0 20px #ff8c00,
     0 0 30px #ff4500
   `;
+  } else if (type === "drain") {
+    el.className = "floating-xp";
+    el.innerHTML = text;
+
+    el.style.color = "#b266ff";
+    el.style.fontSize = "2rem";
+    el.style.fontWeight = "bold";
+
+    el.style.textShadow = `
+    0 0 8px #b266ff,
+    0 0 16px #7a00ff,
+    0 0 24px #4b0082
+  `;
+  } else if (type === "ultraSmall") {
+    el.className = "floating-xp";
+    el.innerHTML = text;
+
+    el.style.color = "#ffd700";
+    el.style.fontSize = "2rem";
+    el.style.scale = "1.2";
+    el.style.fontWeight = "bold";
+
+    el.style.textShadow = `
+    0 0 10px #ffd700,
+    0 0 20px #ff8c00,
+    0 0 30px #ff4500
+  `;
   } else if (type === "piggyCoin") {
     el.className = "floating-coin";
     el.innerHTML = text;
@@ -1301,6 +1344,25 @@ let data = {
   xp: 0,
   coins: 0,
   gems: 0,
+
+  competition: {
+    currentLevel: 0,
+
+    unlocked: {
+      england: true,
+      netherlands: false,
+      brazil: false,
+    },
+
+    firstClear: {
+      england: false,
+      netherlands: false,
+      brazil: false,
+    },
+
+    selected: "england",
+  },
+
   lvls: {
     click: 1,
     friend: 0,
@@ -1313,6 +1375,7 @@ let data = {
     time: 0,
     viewer: 0,
     friendPower: 0,
+    friendSpeed: 0,
     vStand: 0,
     fSec: 0,
     fan: 0,
@@ -1359,6 +1422,7 @@ let data = {
     time: 3,
     viewer: 5,
     friendPower: 3,
+    friendSpeed: 5,
     vStand: 5,
     fSec: 5,
     fan: 5,
@@ -1406,6 +1470,7 @@ let data = {
     time: 50,
     viewer: 150,
     friendPower: 10,
+    friendSpeed: 20,
     vStand: 30,
     fSec: 150,
     fan: 1200,
@@ -1441,6 +1506,7 @@ let data = {
     competition: 10000,
   },
 };
+
 const extraCosts = {
   competition: 100000,
 };
@@ -1595,6 +1661,15 @@ const nodeData = [
     cur: "coin",
     desc: "Покормите друга и увеличте его силу удара на +2, +4, +6🔹",
   },
+
+  {
+    id: "node-friendSpeed",
+    k: "friendSpeed",
+    name: "ОХОТНИЧЬЯ ПОРОДА",
+    cur: "coin",
+    desc: "Уменьшает интервал между ударами друга на 0.1с,0.2с, 0.3с, 0.4с и 0.5с",
+  },
+
   {
     id: "node-fan",
     k: "fan",
@@ -1762,6 +1837,8 @@ const nodeData = [
 
 // 1. Храним текущие настройки игрока
 // 1. В объекте теперь храним НАЗВАНИЕ цвета, а не код
+let playerCreated = false;
+
 let playerSettings = {
   name: "PLAYER",
   country: "ru",
@@ -1821,7 +1898,7 @@ function normalizePlayerName(name) {
 
   if (!cleanName) return "PLAYER";
 
-  return cleanName.slice(0, 16).toUpperCase();
+  return cleanName.slice(0, 12).toUpperCase();
 }
 
 window.onload = function () {
@@ -1830,6 +1907,7 @@ window.onload = function () {
   updatePlayerCard();
   initPlayerNameInput();
   initFlagControls();
+  updateMenuHistoryPanels();
 };
 function updatePlayerCardName() {
   const nameEl = document.getElementById("player-card-name");
@@ -1934,19 +2012,32 @@ function updatePlayerCardOVR() {
 }
 function getCardTier(ovr) {
   if (ovr >= 95) return "diamond";
-  if (ovr >= 90) return "platinum";
+  if (ovr >= 85) return "platinum";
   if (ovr >= 75) return "gold";
-  if (ovr >= 66) return "silver";
+  if (ovr >= 65) return "silver";
   if (ovr >= 50) return "bronze";
   return "base";
 }
+function getCardBorderTier(ovr) {
+  if (ovr >= 95) return "diamond";
+  if (ovr >= 85) return "platinum";
+  if (ovr >= 75) return "gold";
+  if (ovr >= 65) return "silver";
+  if (ovr >= 50) return "bronze";
+
+  if (ovr >= 40) return "early-gold";
+  if (ovr >= 30) return "early-silver";
+  if (ovr >= 20) return "early-bronze";
+  return "early-base";
+}
+
 function updateCardStyle(ovr) {
   const card = document.getElementById("menu-player-card");
   if (!card) return;
 
   const tier = getCardTier(ovr);
+  const borderTier = getCardBorderTier(ovr);
 
-  // удалить старые классы
   card.classList.remove(
     "card-base",
     "card-bronze",
@@ -1954,10 +2045,20 @@ function updateCardStyle(ovr) {
     "card-gold",
     "card-platinum",
     "card-diamond",
+
+    "border-early-base",
+    "border-early-bronze",
+    "border-early-silver",
+    "border-early-gold",
+    "border-bronze",
+    "border-silver",
+    "border-gold",
+    "border-platinum",
+    "border-diamond",
   );
 
-  // добавить новый
   card.classList.add("card-" + tier);
+  card.classList.add("border-" + borderTier);
 }
 
 function updatePlayerFlag() {
@@ -2015,15 +2116,51 @@ function updatePlayerCard() {
   updatePlayerCardOVR();
   updatePlayerFlag();
 }
+
+function showCompetitionPlayerCardClone() {
+  const sourceCard = document.getElementById("menu-player-card");
+  const wrap = document.getElementById("competition-player-card-clone-wrap");
+
+  if (!sourceCard || !wrap) return;
+
+  wrap.innerHTML = "";
+
+  const clone = sourceCard.cloneNode(true);
+  clone.id = "competition-player-card-clone";
+
+  // убираем повторяющиеся id внутри клона, чтобы не конфликтовали с меню
+  clone.querySelectorAll("[id]").forEach((el) => {
+    el.removeAttribute("id");
+  });
+
+  wrap.appendChild(clone);
+  wrap.style.display = "block";
+}
+
+function hideCompetitionPlayerCardClone() {
+  const wrap = document.getElementById("competition-player-card-clone-wrap");
+  if (!wrap) return;
+
+  wrap.innerHTML = "";
+  wrap.style.display = "none";
+}
+
 function initPlayerNameInput() {
   const input = document.getElementById("player-name-input");
   if (!input) return;
 
   input.addEventListener("input", () => {
-    input.value = input.value.replace(/\n/g, "");
+    input.value = input.value
+      .replace(/\n/g, "")
+      .replace(/\s+/g, " ")
+      .toUpperCase()
+      .slice(0, 12);
+
     updatePlayerName();
     updatePlayerCardName();
   });
+
+  input.value = normalizePlayerName(input.value);
 }
 
 function updatePlayerName() {
@@ -2047,6 +2184,143 @@ function renderPlayerPreview() {
   renderPlayerCardPreview();
 }
 
+function formatMenuRunTime(ms) {
+  const totalSeconds = Math.floor((ms || 0) / 1000);
+  return totalSeconds + "с";
+}
+
+function updateMenuHistoryPanels() {
+  const recordXpEl = document.getElementById("record-xp");
+  const recordCoinsEl = document.getElementById("record-coins");
+  const recordGemsEl = document.getElementById("record-gems");
+  const recordTimeEl = document.getElementById("record-time");
+
+  const lastXpEl = document.getElementById("last-xp");
+  const lastCoinsEl = document.getElementById("last-coins");
+  const lastGemsEl = document.getElementById("last-gems");
+  const lastTimeEl = document.getElementById("last-time");
+
+  const totalXpEl = document.getElementById("total-earned-xp");
+  const totalCoinsEl = document.getElementById("total-earned-coins");
+  const totalGemsEl = document.getElementById("total-earned-gems");
+  const totalTimeEl = document.getElementById("total-earned-time");
+
+  const recordCoinsRow = document.getElementById("record-coins-row");
+  const recordGemsRow = document.getElementById("record-gems-row");
+  const lastCoinsRow = document.getElementById("last-coins-row");
+  const lastGemsRow = document.getElementById("last-gems-row");
+  const totalCoinsRow = document.getElementById("total-earned-coins-row");
+  const totalGemsRow = document.getElementById("total-earned-gems-row");
+
+  if (recordXpEl)
+    recordXpEl.innerText = Math.floor(matchHistory.records.xp || 0);
+  if (recordCoinsEl)
+    recordCoinsEl.innerText = Math.floor(matchHistory.records.coins || 0);
+  if (recordGemsEl)
+    recordGemsEl.innerText = Math.floor(matchHistory.records.gems || 0);
+  if (recordTimeEl)
+    recordTimeEl.innerText = formatMenuRunTime(matchHistory.records.timeMs);
+
+  if (lastXpEl) lastXpEl.innerText = Math.floor(matchHistory.last.xp || 0);
+  if (lastCoinsEl)
+    lastCoinsEl.innerText = Math.floor(matchHistory.last.coins || 0);
+  if (lastGemsEl)
+    lastGemsEl.innerText = Math.floor(matchHistory.last.gems || 0);
+  if (lastTimeEl)
+    lastTimeEl.innerText = formatMenuRunTime(matchHistory.last.timeMs);
+
+  if (totalXpEl) totalXpEl.innerText = Math.floor(matchHistory.total.xp || 0);
+  if (totalCoinsEl)
+    totalCoinsEl.innerText = Math.floor(matchHistory.total.coins || 0);
+  if (totalGemsEl)
+    totalGemsEl.innerText = Math.floor(matchHistory.total.gems || 0);
+  if (totalTimeEl)
+    totalTimeEl.innerText = formatMenuRunTime(matchHistory.total.timeMs);
+
+  const showCoins =
+    (data?.lvls?.viewer || 0) > 0 ||
+    (data?.lvls?.fan || 0) > 0 ||
+    (data?.lvls?.vStand || 0) > 0 ||
+    (data?.lvls?.fSec || 0) > 0 ||
+    (data?.lvls?.drink || 0) > 0 ||
+    (data?.lvls?.attr || 0) > 0 ||
+    (data?.lvls?.adCampaign || 0) > 0 ||
+    (data?.lvls?.reward || 0) > 0 ||
+    (data?.lvls?.midas || 0) > 0 ||
+    (data?.lvls?.goldBall || 0) > 0 ||
+    (data?.lvls?.cCoin || 0) > 0 ||
+    (data?.lvls?.timeCoin || 0) > 0 ||
+    (data?.lvls?.piggy || 0) > 0 ||
+    (data?.lvls?.surprisePiggy || 0) > 0 ||
+    (matchHistory.records.coins || 0) > 0 ||
+    (matchHistory.last.coins || 0) > 0 ||
+    (matchHistory.total.coins || 0) > 0;
+
+  const showGems =
+    (data?.lvls?.crystalBall || 0) > 0 ||
+    (data?.lvls?.synergy || 0) > 0 ||
+    (data?.lvls?.personalReward || 0) > 0 ||
+    (data?.lvls?.crystalTime || 0) > 0 ||
+    (data?.lvls?.vip || 0) > 0 ||
+    (data?.lvls?.surprisePiggy || 0) > 0 ||
+    (matchHistory.records.gems || 0) > 0 ||
+    (matchHistory.last.gems || 0) > 0 ||
+    (matchHistory.total.gems || 0) > 0;
+
+  if (recordCoinsRow)
+    recordCoinsRow.style.display = showCoins ? "flex" : "none";
+  if (lastCoinsRow) lastCoinsRow.style.display = showCoins ? "flex" : "none";
+  if (totalCoinsRow) totalCoinsRow.style.display = showCoins ? "flex" : "none";
+
+  if (recordGemsRow) recordGemsRow.style.display = showGems ? "flex" : "none";
+  if (lastGemsRow) lastGemsRow.style.display = showGems ? "flex" : "none";
+  if (totalGemsRow) totalGemsRow.style.display = showGems ? "flex" : "none";
+}
+function registerMatchResults() {
+  const xpEl = document.getElementById("res-xp-total");
+  const coinsEl = document.getElementById("res-coin-total");
+  const gemsEl = document.getElementById("res-gem-total");
+
+  const totalXp = xpEl
+    ? parseInt(xpEl.innerText.replace(/[^\d]/g, ""), 10) || 0
+    : 0;
+  const totalCoins = coinsEl
+    ? parseInt(coinsEl.innerText.replace(/[^\d]/g, ""), 10) || 0
+    : 0;
+  const totalGems = gemsEl
+    ? parseInt(gemsEl.innerText.replace(/[^\d]/g, ""), 10) || 0
+    : 0;
+  const totalTime = totalEl || 0;
+
+  matchHistory.last.xp = totalXp;
+  matchHistory.last.coins = totalCoins;
+  matchHistory.last.gems = totalGems;
+  matchHistory.last.timeMs = totalTime;
+
+  matchHistory.total.xp += totalXp;
+  matchHistory.total.coins += totalCoins;
+  matchHistory.total.gems += totalGems;
+  matchHistory.total.timeMs += totalTime;
+
+  if (totalXp > (matchHistory.records.xp || 0)) {
+    matchHistory.records.xp = totalXp;
+  }
+
+  if (totalCoins > (matchHistory.records.coins || 0)) {
+    matchHistory.records.coins = totalCoins;
+  }
+
+  if (totalGems > (matchHistory.records.gems || 0)) {
+    matchHistory.records.gems = totalGems;
+  }
+
+  if (totalTime > (matchHistory.records.timeMs || 0)) {
+    matchHistory.records.timeMs = totalTime;
+  }
+
+  updateMenuHistoryPanels();
+}
+
 function addRes(type, amt) {
   // Проверяем, существует ли объект data, чтобы не было ошибок
   if (typeof data !== "undefined") {
@@ -2062,6 +2336,28 @@ function addRes(type, amt) {
     );
   }
 }
+
+function updateCompetitionHud() {
+  if (currentMode !== "competition") return;
+
+  const timerEl = document.getElementById("competition-timer-text");
+  const playerScoreEl = document.getElementById("competition-player-score");
+  const enemyScoreEl = document.getElementById("competition-enemy-score");
+
+  if (timerEl) {
+    timerEl.innerText = fmt(curMs);
+  }
+
+  if (playerScoreEl) {
+    const totalNow = Math.floor(getCompetitionPlayerScore());
+    playerScoreEl.innerText = totalNow;
+  }
+
+  if (enemyScoreEl) {
+    enemyScoreEl.innerText = Math.floor(competitionState.enemyScore || 0);
+  }
+}
+
 function updatePartColor(part, colorName) {
   // part может быть 'shirtColor', 'shortsColor' или 'socksColor'
   playerSettings[part] = colorName;
@@ -2083,6 +2379,8 @@ function savePlayerAndStart() {
   const adminUI = document.getElementById("admin-ui");
 
   updatePlayerName();
+
+  playerCreated = true;
 
   if (customScreen) customScreen.classList.remove("active");
   if (adminUI) adminUI.style.display = "flex";
@@ -2143,6 +2441,224 @@ function initTree() {
   });
 }
 
+function updateCompetitionButton() {
+  const btn = document.getElementById("start-competition-btn");
+  if (!btn) return;
+
+  btn.style.display = data.lvls.competition > 0 ? "inline-flex" : "none";
+}
+
+function showCompetitionEnemyCard() {
+  const wrap = document.getElementById("competition-enemy-card-wrap");
+  if (!wrap) return;
+
+  const enemy =
+    competitionLevels.find((lvl) => lvl.key === data.competition.selected) ||
+    competitionLevels[0];
+
+  let cardClass = "card-base";
+
+  if (enemy.ovr >= 90) {
+    cardClass = "card-diamond";
+  } else if (enemy.ovr >= 85) {
+    cardClass = "card-platinum";
+  } else if (enemy.ovr >= 75) {
+    cardClass = "card-gold";
+  } else if (enemy.ovr >= 60) {
+    cardClass = "card-silver";
+  } else if (enemy.ovr >= 40) {
+    cardClass = "card-bronze";
+  }
+
+  wrap.innerHTML = `
+    <div class="player-card ${cardClass}" id="competition-enemy-card-ui">
+      <div class="player-card-top-left">
+        <div class="player-card-ovr">${enemy.ovr}</div>
+        <img class="player-card-flag" src="${enemy.flag}" alt="flag" />
+      </div>
+
+      <div class="player-card-avatar">
+        <div class="player-card-preview-manual">
+          <img
+            src="${enemy.opponent}"
+            alt="${enemy.name}"
+            class="competition-enemy-portrait"
+          />
+        </div>
+      </div>
+
+      <div class="player-card-header">${enemy.name}</div>
+
+      <div class="player-card-stats">
+        <div class="player-stat-row">
+          <span>Сила удара</span>
+          <b>${enemy.stats.power}</b>
+        </div>
+
+        <div class="player-stat-row">
+          <span>Шанс крита</span>
+          <b>${Math.round(enemy.stats.critChance * 100)}%</b>
+        </div>
+
+        <div class="player-stat-row">
+          <span>Сила крита</span>
+          <b>x${enemy.stats.critMult}</b>
+        </div>
+
+        <div class="player-stat-row">
+          <span>Скорость</span>
+          <b>${enemy.stats.speed}с</b>
+        </div>
+
+        <div class="player-stat-row">
+          <span>Special</span>
+          <b>${enemy.special?.chance ? Math.round(enemy.special.chance * 100) + "%" : "—"}</b>
+        </div>
+      </div>
+    </div>
+  `;
+
+  wrap.style.display = "block";
+}
+
+function hideCompetitionEnemyCard() {
+  const wrap = document.getElementById("competition-enemy-card-wrap");
+  if (!wrap) return;
+
+  wrap.innerHTML = "";
+  wrap.style.display = "none";
+}
+
+const SAVE_KEY = "footballJourneySave_v1";
+
+function saveGame() {
+  try {
+    const saveData = {
+      data,
+      playerSettings,
+      matchHistory,
+      playerCreated,
+      savedAt: Date.now(),
+    };
+
+    localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
+
+    showGameMessage?.(
+      "✅ ИГРА СОХРАНЕНА",
+      "Прогресс, игрок и рекорды успешно сохранены.",
+    );
+
+    console.log("Игра сохранена");
+  } catch (e) {
+    console.error("Ошибка сохранения:", e);
+  }
+}
+
+function hasSaveGame() {
+  return localStorage.getItem(SAVE_KEY) !== null;
+}
+
+function loadGame() {
+  try {
+    const rawSave = localStorage.getItem(SAVE_KEY);
+    if (!rawSave) return false;
+
+    const saveData = JSON.parse(rawSave);
+    if (!saveData) return false;
+
+    if (saveData.data) {
+      data = mergeSaveData(data, saveData.data);
+    }
+
+    if (saveData.playerSettings) {
+      playerSettings = {
+        ...playerSettings,
+        ...saveData.playerSettings,
+      };
+    }
+
+    if (saveData.matchHistory) {
+      matchHistory = {
+        records: {
+          ...matchHistory.records,
+          ...(saveData.matchHistory.records || {}),
+        },
+        last: {
+          ...matchHistory.last,
+          ...(saveData.matchHistory.last || {}),
+        },
+        total: {
+          ...matchHistory.total,
+          ...(saveData.matchHistory.total || {}),
+        },
+      };
+    }
+
+    playerCreated = !!saveData.playerCreated;
+
+    currentFlagIndex = AVAILABLE_FLAGS.indexOf(playerSettings.country);
+    if (currentFlagIndex < 0) currentFlagIndex = 0;
+
+    renderPlayerPreview();
+    renderFlagPreview();
+    updatePlayerCard();
+    updateUI();
+    updateMenuHistoryPanels();
+
+    createVisualPlayer(
+      32,
+      73,
+      playerSettings.head,
+      playerSettings.shirtColor,
+      playerSettings.shortsColor,
+      playerSettings.socksColor,
+    );
+
+    console.log("Игра загружена");
+    return true;
+  } catch (e) {
+    console.error("Ошибка загрузки:", e);
+    return false;
+  }
+}
+
+function mergeSaveData(defaultData, savedData) {
+  return {
+    ...defaultData,
+    ...savedData,
+
+    competition: {
+      ...defaultData.competition,
+      ...(savedData.competition || {}),
+
+      unlocked: {
+        ...defaultData.competition.unlocked,
+        ...(savedData.competition?.unlocked || {}),
+      },
+
+      firstClear: {
+        ...defaultData.competition.firstClear,
+        ...(savedData.competition?.firstClear || {}),
+      },
+    },
+
+    lvls: {
+      ...defaultData.lvls,
+      ...(savedData.lvls || {}),
+    },
+
+    max: {
+      ...defaultData.max,
+      ...(savedData.max || {}),
+    },
+
+    costs: {
+      ...defaultData.costs,
+      ...(savedData.costs || {}),
+    },
+  };
+}
+
 function updateUI() {
   document.getElementById("total-xp").innerText = Math.floor(data.xp);
   document.getElementById("total-coins").innerText = Math.floor(data.coins);
@@ -2154,6 +2670,9 @@ function updateUI() {
 
   if (typeof updatePlayerCard === "function") {
     updatePlayerCard();
+  }
+  if (typeof updateMenuHistoryPanels === "function") {
+    updateMenuHistoryPanels();
   }
 
   nodeData.forEach((n) => {
@@ -2172,6 +2691,7 @@ function updateUI() {
     // Левая ветка друга
     if (n.k === "fCrit" || n.k === "viewer") canSee = data.lvls.friend >= 1;
     if (n.k === "fCoin" || n.k === "friendPower") canSee = data.lvls.fCrit >= 1;
+    if (n.k === "friendSpeed") canSee = data.lvls.friendPower >= 1;
 
     // Ветка зрителей
     if (n.k === "vStand" || n.k === "fan") canSee = data.lvls.viewer >= 1;
@@ -2242,7 +2762,9 @@ function updateUI() {
   });
   updateLiveStats();
   updatePlayerCardStats();
+  updateCompetitionButton();
 }
+
 function centerTreeOnClickNode() {
   const viewport = document.getElementById("tree-viewport");
   const clickNode = document.getElementById("node-click");
@@ -2275,13 +2797,13 @@ function buy(type, cur) {
       updateUI();
 
       // Всплывающее окно
-      alert(
-        "🏆 СОСТЯЗАНИЯ ОТКРЫТЫ!\n\n" +
-          "Вы открыли режим состязаний.\n" +
-          "Теперь вам доступны новые испытания и новые способы прогресса.",
+      showGameMessage(
+        "🏆 СОСТЯЗАНИЯ ОТКРЫТЫ!",
+        "Вы открыли режим состязаний.<br>Теперь вам доступны новые испытания и новые способы прогресса.",
       );
     } else {
-      alert(
+      showGameMessage(
+        "❌ Недостаточно ресурсов!",
         `Чтобы открыть состязания, нужно накопить:\n🟡 ${costCoin} монет и 🔹 ${costXP} опыта!`,
       );
     }
@@ -2324,6 +2846,22 @@ function buy(type, cur) {
       updateMultiBalls();
     }
   }
+}
+function showGameMessage(title, text) {
+  const box = document.createElement("div");
+  box.className = "game-message-overlay";
+
+  box.innerHTML = `
+    <div class="game-message-card">
+      <h2>${title}</h2>
+      <p>${text}</p>
+      <button class="menu-btn" onclick="this.closest('.game-message-overlay').remove()">
+        OK
+      </button>
+    </div>
+  `;
+
+  document.body.appendChild(box);
 }
 
 let gInt,
@@ -2370,6 +2908,35 @@ let currentExtraBallIndexes = [];
 let mainBallMoveTimeout;
 let mainBallMoveDelay = 0;
 let mainBallMoveStartedAt = 0;
+let sCompetitionDrain = 0;
+
+let matchHistory = {
+  records: {
+    xp: 0,
+    coins: 0,
+    gems: 0,
+    timeMs: 0,
+    hits: 0,
+  },
+  last: {
+    xp: 0,
+    coins: 0,
+    gems: 0,
+    timeMs: 0,
+    hits: 0,
+  },
+  total: {
+    xp: 0,
+    coins: 0,
+    gems: 0,
+    timeMs: 0,
+    hits: 0,
+  },
+};
+
+let currentMode = "normal"; // normal | competition
+let enemyScore = 0;
+let enemyInt = null;
 
 let cloneLifeInterval;
 let piggySpawnInterval;
@@ -2397,9 +2964,333 @@ let surprisePiggyState = {
   spawnTime: 0,
   lifeTime: 0,
 };
+let competitionState = {
+  level: 0,
+  enemyScore: 0,
+  enemyInterval: null,
+  currentEnemy: null,
+};
+const competitionLevels = [
+  {
+    id: 0,
+    key: "england",
+    country: "England",
+    name: "Jimmy",
+    ovr: 84,
+    bg: "competition/England.png",
+    opponent: "competition/opponent_eng.png",
+    flag: "flags/eng.png",
+    position: {
+      right: 260,
+      bottom: 100,
+      scale: 0.75,
+    },
+
+    stats: {
+      power: 50,
+      critChance: 0.1,
+      critMult: 5,
+      speed: 0.2,
+    },
+
+    special: {
+      name: "Energy Rush",
+      chance: 0.03,
+    },
+  },
+
+  {
+    id: 1,
+    key: "netherlands",
+    country: "Netherlands",
+    name: "Pitbull",
+    ovr: 86,
+    bg: "competition/Netherlands.png",
+    opponent: "competition/opponent_ned.png",
+    flag: "flags/nl.png",
+    position: {
+      right: 210,
+      bottom: 120,
+      scale: 0.7,
+    },
+
+    stats: {
+      power: 30,
+      critChance: 0.01,
+      critMult: 10,
+      speed: 0.2,
+    },
+
+    special: {
+      name: "Pitbull Bite",
+      chance: 1,
+      bitePower: 200,
+      biteSpeed: 0.75,
+      biteCritChance: 0.01,
+      biteCritMult: 5,
+    },
+  },
+
+  {
+    id: 2,
+    key: "brazil",
+    country: "Brazil",
+    name: "Ronny",
+    ovr: 92,
+    bg: "competition/Brazil.png",
+    opponent: "competition/opponent_bra.png",
+    flag: "flags/br.png",
+    position: {
+      right: 250,
+      bottom: 150,
+      scale: 0.72,
+    },
+
+    stats: {
+      power: 10,
+      critChance: 0.05,
+      critMult: 50,
+      speed: 0.05,
+    },
+
+    special: {
+      name: "—",
+      chance: 0,
+    },
+  },
+];
+
+function applyMatchModeView() {
+  const gameScreen = document.getElementById("game-screen");
+  if (!gameScreen) return;
+
+  if (currentMode === "competition") {
+    const lvl =
+      competitionLevels[data.competition.currentLevel] || competitionLevels[0];
+    gameScreen.classList.add("competition-mode");
+    gameScreen.style.backgroundImage = `url("${lvl.bg}")`;
+  } else {
+    gameScreen.classList.remove("competition-mode");
+    gameScreen.style.backgroundImage = 'url("match/pole.png")';
+  }
+}
 
 function getReflexInterval() {
   return [0, 300, 250, 200, 150, 100][data.lvls.reflex || 0] || 0;
+}
+
+function refreshMatchRuntimeUI() {
+  const scoreEl = document.getElementById("current-score");
+  const coinsEl = document.getElementById("game-coins");
+  let totalNow = sClick + sFriend + sFooty;
+
+  if (scoreEl) scoreEl.innerText = Math.floor(totalNow);
+  if (coinsEl) coinsEl.innerText = `🟡 ${Math.floor(sCoins)}`;
+}
+
+function getAutoClickTarget() {
+  if (!mouseX && !mouseY) return null;
+
+  const el = document.elementFromPoint(mouseX, mouseY);
+  if (!el) return null;
+
+  if (
+    el.id === "ball" ||
+    el.id === "piggy" ||
+    el.id === "surprise-piggy" ||
+    el.classList.contains("extra-ball") ||
+    el.classList.contains("clone-piggy") ||
+    el.classList.contains("clone-surprise-piggy")
+  ) {
+    return el;
+  }
+
+  return null;
+}
+let audioUnlocked = false;
+
+function unlockAudio() {
+  if (audioUnlocked) return Promise.resolve();
+
+  const silentSounds = [];
+
+  menuPlaylist.forEach((track) => {
+    track.muted = true;
+    track.currentTime = 0;
+    silentSounds.push(
+      track
+        .play()
+        .then(() => {
+          track.pause();
+          track.currentTime = 0;
+          track.muted = false;
+        })
+        .catch(() => {
+          track.muted = false;
+        }),
+    );
+  });
+
+  music.game.muted = true;
+  music.game.currentTime = 0;
+  silentSounds.push(
+    music.game
+      .play()
+      .then(() => {
+        music.game.pause();
+        music.game.currentTime = 0;
+        music.game.muted = false;
+      })
+      .catch(() => {
+        music.game.muted = false;
+      }),
+  );
+
+  audioUnlocked = true;
+  return Promise.allSettled(silentSounds);
+}
+
+function showMenuAfterBoot() {
+  const bootScreen = document.getElementById("boot-screen");
+  const menuScreen = document.getElementById("menu-screen");
+  const customScreen = document.getElementById("custom-screen");
+  const adminUI = document.getElementById("admin-ui");
+
+  if (bootScreen) bootScreen.classList.remove("active");
+
+  if (playerCreated) {
+    if (customScreen) customScreen.classList.remove("active");
+    if (menuScreen) menuScreen.classList.add("active");
+    if (adminUI) adminUI.style.display = "flex";
+  } else {
+    if (menuScreen) menuScreen.classList.remove("active");
+    if (customScreen) customScreen.classList.add("active");
+    if (adminUI) adminUI.style.display = "none";
+  }
+
+  playMusic("menu");
+}
+
+function initBootScreen() {
+  const bootStartBtn = document.getElementById("boot-start-btn");
+  const bootLoadBtn = document.getElementById("boot-load-btn");
+  const menuScreen = document.getElementById("menu-screen");
+
+  if (menuScreen) {
+    menuScreen.classList.remove("active");
+  }
+
+  if (bootLoadBtn && hasSaveGame()) {
+    bootLoadBtn.style.display = "inline-block";
+  }
+
+  if (bootStartBtn) {
+    bootStartBtn.addEventListener("click", async () => {
+      await unlockAudio();
+      showMenuAfterBoot();
+    });
+  }
+
+  if (bootLoadBtn) {
+    bootLoadBtn.addEventListener("click", async () => {
+      await unlockAudio();
+
+      const loaded = loadGame();
+
+      if (loaded) {
+        showMenuAfterBoot();
+      } else {
+        showGameMessage?.(
+          "❌ Загрузка не удалась",
+          "Сохранение не найдено или повреждено.",
+        );
+      }
+    });
+  }
+}
+
+document.addEventListener("DOMContentLoaded", initBootScreen);
+
+// =================================
+// FREEZING, TELEKINESIS, SHOCKWAVE и связанные механики
+// ================================
+
+function getFreezingChance() {
+  return [0, 1, 2, 3][data.lvls.freezing || 0] || 0;
+}
+function getFreezingTimeBonus() {
+  return [250, 500, 750, 1000][data.lvls.freezingTime || 0] || 250;
+}
+function applyFreezing(target, event) {
+  if (!target) return;
+  if ((data.lvls.freezing || 0) <= 0) return;
+
+  const chance = getFreezingChance();
+  if (Math.random() * 100 >= chance) return;
+  playSound(sounds.freeze, 0.18, false);
+
+  const bonusTime = getFreezingTimeBonus();
+
+  // 🔵 EXTRA BALL (и клоны мячей)
+  if (target.classList.contains("extra-ball")) {
+    let lifeTime = parseInt(target.dataset.lifeTime || "0", 10);
+    if (lifeTime > 0) {
+      lifeTime += bonusTime;
+      target.dataset.lifeTime = lifeTime.toString();
+    }
+  }
+
+  // 🔵 ОСНОВНОЙ МЯЧ (опционально)
+  if (target.id === "ball") {
+    const elapsed = Date.now() - mainBallMoveStartedAt;
+    let remaining = mainBallMoveDelay - elapsed;
+
+    if (remaining < 0) remaining = 0;
+
+    remaining += bonusTime;
+    scheduleMainBallMove(remaining);
+  }
+
+  // 🐷 ОБЫЧНАЯ СВИНКА
+  if (target.id === "piggy" && piggyState.active) {
+    piggyState.lifeTime += bonusTime;
+  }
+
+  // 🐷 SURPRISE
+  if (target.id === "surprise-piggy" && surprisePiggyState.active) {
+    surprisePiggyState.lifeTime += bonusTime;
+  }
+
+  // 🧬 КЛОН СВИНКИ
+  if (target.classList.contains("clone-piggy")) {
+    let lifeTime = parseInt(target.dataset.lifeTime || "0", 10);
+    if (lifeTime > 0) {
+      lifeTime += bonusTime;
+      target.dataset.lifeTime = lifeTime.toString();
+    }
+  }
+
+  // 🧬 КЛОН SURPRISE
+  if (target.classList.contains("clone-surprise-piggy")) {
+    let lifeTime = parseInt(target.dataset.lifeTime || "0", 10);
+    if (lifeTime > 0) {
+      lifeTime += bonusTime;
+      target.dataset.lifeTime = lifeTime.toString();
+    }
+  }
+
+  // ❄️ ВИЗУАЛ
+  const pos = getElementCenter(target);
+  if (pos) {
+    spawnFloatingText("❄️", pos.x, pos.y - 25, "freeze");
+  }
+
+  // ❄️ Лёгкий freeze-эффект
+  target.classList.add("freeze-effect");
+
+  setTimeout(() => {
+    target.classList.remove("freeze-effect");
+  }, 200);
 }
 
 function getShockwaveHits() {
@@ -2487,191 +3378,6 @@ function getTelekinesisTargets(excludedElement = null) {
   }
 
   return targets;
-}
-function refreshMatchRuntimeUI() {
-  const scoreEl = document.getElementById("current-score");
-  const coinsEl = document.getElementById("game-coins");
-  let totalNow = sClick + sFriend + sFooty;
-
-  if (scoreEl) scoreEl.innerText = Math.floor(totalNow);
-  if (coinsEl) coinsEl.innerText = `🟡 ${Math.floor(sCoins)}`;
-}
-
-function getAutoClickTarget() {
-  if (!mouseX && !mouseY) return null;
-
-  const el = document.elementFromPoint(mouseX, mouseY);
-  if (!el) return null;
-
-  if (
-    el.id === "ball" ||
-    el.id === "piggy" ||
-    el.id === "surprise-piggy" ||
-    el.classList.contains("extra-ball") ||
-    el.classList.contains("clone-piggy") ||
-    el.classList.contains("clone-surprise-piggy")
-  ) {
-    return el;
-  }
-
-  return null;
-}
-let audioUnlocked = false;
-
-function unlockAudio() {
-  if (audioUnlocked) return Promise.resolve();
-
-  const silentSounds = [];
-
-  menuPlaylist.forEach((track) => {
-    track.muted = true;
-    track.currentTime = 0;
-    silentSounds.push(
-      track
-        .play()
-        .then(() => {
-          track.pause();
-          track.currentTime = 0;
-          track.muted = false;
-        })
-        .catch(() => {
-          track.muted = false;
-        }),
-    );
-  });
-
-  music.game.muted = true;
-  music.game.currentTime = 0;
-  silentSounds.push(
-    music.game
-      .play()
-      .then(() => {
-        music.game.pause();
-        music.game.currentTime = 0;
-        music.game.muted = false;
-      })
-      .catch(() => {
-        music.game.muted = false;
-      }),
-  );
-
-  audioUnlocked = true;
-  return Promise.allSettled(silentSounds);
-}
-
-function showMenuAfterBoot() {
-  const bootScreen = document.getElementById("boot-screen");
-  const menuScreen = document.getElementById("menu-screen");
-
-  if (bootScreen) {
-    bootScreen.classList.remove("active");
-  }
-
-  if (menuScreen) {
-    menuScreen.classList.add("active");
-  }
-
-  playMusic("menu");
-}
-
-function initBootScreen() {
-  const bootStartBtn = document.getElementById("boot-start-btn");
-  const menuScreen = document.getElementById("menu-screen");
-
-  if (menuScreen) {
-    menuScreen.classList.remove("active");
-  }
-
-  if (!bootStartBtn) return;
-
-  bootStartBtn.addEventListener("click", async () => {
-    await unlockAudio();
-    showMenuAfterBoot();
-  });
-}
-
-document.addEventListener("DOMContentLoaded", initBootScreen);
-
-// =================================
-// FREEZING
-// ================================
-
-function getFreezingChance() {
-  return [0, 1, 2, 3][data.lvls.freezing || 0] || 0;
-}
-function getFreezingTimeBonus() {
-  return [250, 500, 750, 1000][data.lvls.freezingTime || 0] || 250;
-}
-function applyFreezing(target, event) {
-  if (!target) return;
-  if ((data.lvls.freezing || 0) <= 0) return;
-
-  const chance = getFreezingChance();
-  if (Math.random() * 100 >= chance) return;
-  playSound(sounds.freeze, 0.18, false);
-
-  const bonusTime = getFreezingTimeBonus();
-
-  // 🔵 EXTRA BALL (и клоны мячей)
-  if (target.classList.contains("extra-ball")) {
-    let lifeTime = parseInt(target.dataset.lifeTime || "0", 10);
-    if (lifeTime > 0) {
-      lifeTime += bonusTime;
-      target.dataset.lifeTime = lifeTime.toString();
-    }
-  }
-
-  // 🔵 ОСНОВНОЙ МЯЧ (опционально)
-  if (target.id === "ball") {
-    const elapsed = Date.now() - mainBallMoveStartedAt;
-    let remaining = mainBallMoveDelay - elapsed;
-
-    if (remaining < 0) remaining = 0;
-
-    remaining += bonusTime;
-    scheduleMainBallMove(remaining);
-  }
-
-  // 🐷 ОБЫЧНАЯ СВИНКА
-  if (target.id === "piggy" && piggyState.active) {
-    piggyState.lifeTime += bonusTime;
-  }
-
-  // 🐷 SURPRISE
-  if (target.id === "surprise-piggy" && surprisePiggyState.active) {
-    surprisePiggyState.lifeTime += bonusTime;
-  }
-
-  // 🧬 КЛОН СВИНКИ
-  if (target.classList.contains("clone-piggy")) {
-    let lifeTime = parseInt(target.dataset.lifeTime || "0", 10);
-    if (lifeTime > 0) {
-      lifeTime += bonusTime;
-      target.dataset.lifeTime = lifeTime.toString();
-    }
-  }
-
-  // 🧬 КЛОН SURPRISE
-  if (target.classList.contains("clone-surprise-piggy")) {
-    let lifeTime = parseInt(target.dataset.lifeTime || "0", 10);
-    if (lifeTime > 0) {
-      lifeTime += bonusTime;
-      target.dataset.lifeTime = lifeTime.toString();
-    }
-  }
-
-  // ❄️ ВИЗУАЛ
-  const pos = getElementCenter(target);
-  if (pos) {
-    spawnFloatingText("❄️", pos.x, pos.y - 25, "freeze");
-  }
-
-  // ❄️ Лёгкий freeze-эффект
-  target.classList.add("freeze-effect");
-
-  setTimeout(() => {
-    target.classList.remove("freeze-effect");
-  }, 200);
 }
 
 function applyTelekinesis(sourceElement, sourceEvent) {
@@ -3296,12 +4002,20 @@ document.addEventListener("mousemove", (e) => {
   mouseY = e.clientY;
 });
 
-function startGame() {
+// =================================
+// GAME START
+// =================================
+
+function startGame(mode = "normal") {
   playMusic("game");
+
+  currentMode = mode;
+  competitionState.enemyScore = 0;
 
   if (data.lvls.friend > 0) {
     startFriend();
   }
+
   sClick =
     sFriend =
     sFooty =
@@ -3332,6 +4046,8 @@ function startGame() {
     sVipGems =
     sCrystalTimeGems =
     actualViewerCount =
+    competitionPenalty =
+    sCompetitionDrain =
       0;
 
   piggyState.active = false;
@@ -3352,13 +4068,84 @@ function startGame() {
     shockwaveRing.classList.remove("active");
   }
 
-  let maxT = (11 + data.lvls.time) * 1000;
+  const playerName =
+    document.getElementById("player-card-name")?.textContent || "PLAYER";
+  const playerNameHud = document.getElementById("competition-player-name");
+
+  if (playerNameHud) {
+    playerNameHud.textContent = playerName;
+  }
+
+  const enemyNameHud = document.getElementById("competition-enemy-name");
+
+  if (enemyNameHud && currentMode === "competition") {
+    const enemy =
+      competitionLevels.find((lvl) => lvl.key === data.competition.selected) ||
+      competitionLevels[0];
+
+    enemyNameHud.textContent = enemy.name;
+  }
+
+  const compCard = document.getElementById("competition-player-card-side");
+
+  if (currentMode === "competition") {
+    if (compCard) compCard.style.display = "block";
+  } else {
+    if (compCard) compCard.style.display = "none";
+  }
+
+  let maxT;
+
+  if (currentMode === "competition") {
+    maxT = 15000; // 15 секунд
+  } else {
+    maxT = (11 + data.lvls.time) * 1000;
+  }
+
   curMs = maxT;
 
   document.getElementById("admin-ui").style.display = "none";
   document.getElementById("menu-screen").classList.remove("active");
   document.getElementById("game-screen").classList.add("active");
-  document.getElementById("top-stats-ui").classList.add("active");
+
+  if (currentMode === "competition") {
+    document.getElementById("top-stats-ui").classList.remove("active");
+    document.getElementById("competition-hud").classList.add("active");
+  } else {
+    document.getElementById("top-stats-ui").classList.add("active");
+    document.getElementById("competition-hud").classList.remove("active");
+  }
+  const centerScore = document.getElementById("score-container");
+
+  if (currentMode === "competition") {
+    if (centerScore) centerScore.style.display = "none";
+  } else {
+    if (centerScore) centerScore.style.display = "block";
+  }
+  const coinsEl = document.getElementById("game-coins");
+
+  if (currentMode === "competition") {
+    if (coinsEl) coinsEl.style.display = "none";
+  } else {
+    if (coinsEl) coinsEl.style.display = "block";
+  }
+
+  if (currentMode === "competition") {
+    showCompetitionPlayerCardClone();
+    showCompetitionEnemyCard();
+  } else {
+    hideCompetitionPlayerCardClone();
+    hideCompetitionEnemyCard();
+  }
+
+  updateCompetitionHud();
+  applyCompetitionVisuals();
+  updatePitbullVisibility();
+  applyMatchModeView();
+
+  if (currentMode === "competition") {
+    startCompetitionEnemy();
+  }
 
   currentMainBallIndex = -1;
   currentExtraBallIndexes = [];
@@ -3393,21 +4180,30 @@ function startGame() {
     updateExtraBallLife();
   }, 100);
 
-  piggySpawnInterval = setInterval(() => {
-    trySpawnPiggy();
-  }, 500);
+  if (currentMode !== "competition") {
+    piggySpawnInterval = setInterval(() => {
+      trySpawnPiggy();
+    }, 500);
 
-  piggyLifeInterval = setInterval(() => {
-    updatePiggyLife();
-  }, 100);
+    piggyLifeInterval = setInterval(() => {
+      updatePiggyLife();
+    }, 100);
 
-  surprisePiggySpawnInterval = setInterval(() => {
-    trySpawnSurprisePiggy();
-  }, 500);
+    surprisePiggySpawnInterval = setInterval(() => {
+      trySpawnSurprisePiggy();
+    }, 500);
 
-  surprisePiggyLifeInterval = setInterval(() => {
-    updateSurprisePiggyLife();
-  }, 100);
+    surprisePiggyLifeInterval = setInterval(() => {
+      updateSurprisePiggyLife();
+    }, 100);
+  }
+  if (currentMode === "competition") {
+    const piggy = document.getElementById("piggy");
+    const surprisePiggy = document.getElementById("surprise-piggy");
+
+    if (piggy) piggy.style.display = "none";
+    if (surprisePiggy) surprisePiggy.style.display = "none";
+  }
 
   cloneLifeInterval = setInterval(() => {
     updateClonePiggiesLife();
@@ -3419,6 +4215,8 @@ function startGame() {
     curMs -= 10;
     totalEl += 10;
     document.getElementById("timer-text").innerText = fmt(curMs);
+
+    updateCompetitionHud();
 
     let angle = (curMs / maxT) * 360;
     document.getElementById("stopwatch-hand").style.transform =
@@ -3445,7 +4243,14 @@ function startGame() {
     if (data.lvls.friend > 0) {
       friendTickCounter++;
 
-      if (friendTickCounter >= 10) {
+      const baseTicks = 10;
+      const bonus = getFriendSpeedBonusTicks();
+
+      let neededTicks = baseTicks - bonus;
+
+      if (neededTicks < 2) neededTicks = 2; // ограничение
+
+      if (friendTickCounter >= neededTicks) {
         let fPower = data.lvls.friend + (data.lvls.friendPower || 0) * 2;
         let isFriendCrit = false;
         let gotCoin = false;
@@ -3488,11 +4293,19 @@ function startGame() {
     } else {
       friendTickCounter = 0;
     }
+    function getFriendSpeedBonusTicks() {
+      return data.lvls.friendSpeed || 0; // 1 уровень = -1 тик
+    }
 
     let totalNow = sClick + sFriend + sFooty;
     document.getElementById("current-score").innerText = Math.floor(totalNow);
   }, 100);
+  updateCompetitionHud();
 }
+
+// =================================
+// handleKick - основной обработчик кликов по мячу и свинкам
+// =================================
 
 function handleKick(event) {
   let ball = event.currentTarget;
@@ -3968,6 +4781,8 @@ function handleKick(event) {
   sClick += p;
   let totalNow = sClick + sFriend + sFooty;
 
+  if (totalNow < 0) totalNow = 0;
+
   const scoreEl = document.getElementById("current-score");
   const coinsEl = document.getElementById("game-coins");
 
@@ -3989,7 +4804,7 @@ function handleKick(event) {
     );
   }
 
-  if (data.lvls.reward > 0) {
+  if (!isPitbullCompetitionMatch() && data.lvls.reward > 0) {
     let threshold = 1300 - data.lvls.reward * 100;
     const bigRewardBonuses = [0, 1, 3, 6];
 
@@ -4008,7 +4823,7 @@ function handleKick(event) {
     }
   }
 
-  if (data.lvls.personalReward > 0) {
+  if (!isPitbullCompetitionMatch() && data.lvls.personalReward > 0) {
     const gemThresholds = [0, 1500, 1250, 1000];
     const threshold = gemThresholds[data.lvls.personalReward] || 0;
 
@@ -4036,7 +4851,12 @@ function hideEl(id) {
   if (el) el.style.display = "none";
 }
 
+// =================================
+// GAME END
+// ================================
+
 function stopGame() {
+  stopCompetitionEnemy();
   clearTimeout(mainBallMoveTimeout);
   clearInterval(ballMoveInterval);
   clearInterval(gInt);
@@ -4099,10 +4919,21 @@ function stopGame() {
   let fC = (data.lvls.fan || 0) + (data.lvls.fSec || 0) * 10;
   let totalPeople = vC + fC;
 
-  let vipChance = [0, 30, 60, 90][data.lvls.vip || 0] || 0;
-  if (Math.random() * 100 < vipChance) {
-    sGems += 3;
-    sVipGems += 3;
+  if (currentMode === "competition") {
+    vC = 0;
+    fC = 0;
+    totalPeople = 0;
+  }
+
+  let vipChance = 0;
+
+  if (currentMode !== "competition") {
+    vipChance = [0, 30, 60, 90][data.lvls.vip || 0] || 0;
+
+    if (Math.random() * 100 < vipChance) {
+      sGems += 3;
+      sVipGems += 3;
+    }
   }
 
   let cBase = totalPeople * 2;
@@ -4142,6 +4973,152 @@ function stopGame() {
   }
 
   let totalXP = Math.floor(sClick + sFriend + sFooty + sBallXP);
+
+  if (currentMode === "competition") {
+    const playerScore = Math.floor(getCompetitionPlayerScore());
+    const enemyScore = Math.floor(competitionState.enemyScore || 0);
+
+    const overlay = document.getElementById("competition-summary-overlay");
+    const title = document.getElementById("competition-result-title");
+    const playerScoreEl = document.getElementById(
+      "competition-result-player-score",
+    );
+    const enemyScoreEl = document.getElementById(
+      "competition-result-enemy-score",
+    );
+
+    if (playerScoreEl) playerScoreEl.innerText = playerScore;
+    if (enemyScoreEl) enemyScoreEl.innerText = enemyScore;
+
+    let rewardXP = playerScore;
+
+    let rewardCoins = Math.floor(playerScore / 100) + Math.floor(sCoins || 0);
+
+    let rewardGems = Math.floor(sGems || 0);
+
+    if (isPitbullCompetitionMatch()) {
+      // Обычная награда + Большой куш считаются от финального счёта
+      if (data.lvls.reward > 0) {
+        const threshold = 1300 - data.lvls.reward * 100;
+        const bigRewardBonuses = [0, 1, 3, 6];
+        const bonusPerReward = 3 + (bigRewardBonuses[data.lvls.bigReward] || 0);
+
+        const rewardCount = Math.floor(playerScore / threshold);
+        const rewardBonusCoins = rewardCount * bonusPerReward;
+
+        rewardCoins += rewardBonusCoins;
+        sRewardCoins += rewardBonusCoins;
+      }
+
+      // Личная награда тоже считается от финального счёта
+      if (data.lvls.personalReward > 0) {
+        const gemThresholds = [0, 1500, 1250, 1000];
+        const threshold = gemThresholds[data.lvls.personalReward] || 0;
+
+        if (threshold > 0) {
+          const gemCount = Math.floor(playerScore / threshold);
+
+          rewardGems += gemCount;
+          sPersonalRewardGems += gemCount;
+        }
+      }
+    }
+
+    const isWin = playerScore > enemyScore;
+
+    let clearBonusCoins = 0;
+    let clearBonusGems = 0;
+
+    const selectedOpponent = data.competition.selected || "england";
+
+    const firstClearBonuses = {
+      england: { coins: 1000, gems: 100 },
+      netherlands: { coins: 1500, gems: 150 },
+      brazil: { coins: 2000, gems: 200 },
+    };
+
+    if (
+      isWin &&
+      data.competition.firstClear &&
+      data.competition.firstClear[selectedOpponent] === false
+    ) {
+      const bonus =
+        firstClearBonuses[selectedOpponent] || firstClearBonuses.england;
+
+      clearBonusCoins = bonus.coins;
+      clearBonusGems = bonus.gems;
+
+      rewardCoins += clearBonusCoins;
+      rewardGems += clearBonusGems;
+
+      data.competition.firstClear[selectedOpponent] = true;
+    }
+
+    data.xp += rewardXP;
+    data.coins += rewardCoins;
+    data.gems += rewardGems;
+
+    const clearBonusBlock = document.getElementById("competition-clear-bonus");
+
+    if (clearBonusBlock) {
+      if (clearBonusCoins > 0 || clearBonusGems > 0) {
+        clearBonusBlock.style.display = "block";
+        document.getElementById("comp-clear-coins").innerText = clearBonusCoins;
+        document.getElementById("comp-clear-gems").innerText = clearBonusGems;
+      } else {
+        clearBonusBlock.style.display = "none";
+      }
+    }
+
+    document.getElementById("comp-xp").innerText = rewardXP;
+    document.getElementById("comp-coins").innerText = rewardCoins;
+
+    console.log("=== COMP GEMS DEBUG ===");
+    console.log("playerScore:", playerScore);
+    console.log("sGems:", sGems);
+    console.log("sCrystalTimeGems:", sCrystalTimeGems);
+    console.log("sPersonalRewardGems:", sPersonalRewardGems);
+    console.log("sVipGems:", sVipGems);
+    console.log("sBallGems:", sBallGems);
+    console.log("sPiggyGems:", sPiggyGems);
+    console.log("sTeleGems:", sTeleGems);
+    console.log("rewardGems:", rewardGems);
+
+    document.getElementById("comp-gems").innerText = rewardGems;
+
+    if (title) {
+      if (playerScore > enemyScore) {
+        title.innerText = "🏆 ПОБЕДА!";
+        title.style.color = "#2ecc71";
+
+        const selected = data.competition.selected;
+
+        if (selected === "england") {
+          data.competition.unlocked.netherlands = true;
+        }
+
+        if (selected === "netherlands") {
+          data.competition.unlocked.brazil = true;
+        }
+      } else if (playerScore < enemyScore) {
+        title.innerText = "❌ ПОРАЖЕНИЕ";
+        title.style.color = "#e74c3c";
+      } else {
+        title.innerText = "🤝 НИЧЬЯ";
+        title.style.color = "#f7e708";
+      }
+    }
+
+    if (overlay) overlay.style.display = "flex";
+
+    if (typeof saveGame === "function") {
+      saveGame();
+    }
+    updateUI();
+
+    return;
+  }
+
   let totalMatchCoins = sCoins + cBase + cExtra;
   let totalMatchGems = sGems;
 
@@ -4151,7 +5128,9 @@ function stopGame() {
   };
 
   setVal("res-time", (totalEl / 1000).toFixed(1) + "s");
-  setVal("res-visitors", totalPeople);
+  if (currentMode !== "competition") {
+    setVal("res-visitors", totalPeople);
+  }
 
   setVal("res-xp-total", totalXP);
   setVal("res-xp-click", Math.floor(sClick));
@@ -4256,6 +5235,8 @@ function stopGame() {
 
   const overlay = document.getElementById("summary-overlay");
   if (overlay) overlay.style.display = "flex";
+
+  registerMatchResults();
 }
 function closeSummary() {
   document.getElementById("summary-overlay").style.display = "none";
@@ -4296,9 +5277,16 @@ function closeSummary() {
   });
 
   document.getElementById("top-stats-ui").classList.remove("active");
+  document.getElementById("competition-hud").classList.remove("active");
   document.getElementById("game-screen").classList.remove("active");
   document.getElementById("menu-screen").classList.add("active");
   document.getElementById("admin-ui").style.display = "flex";
+
+  currentMode = "normal";
+  applyCompetitionVisuals();
+  hideCompetitionPlayerCardClone();
+  hideCompetitionEnemyCard();
+  updatePitbullVisibility();
   updateUI();
 }
 
@@ -4501,6 +5489,30 @@ function initCustomizationControls() {
 
 function initAdminControls() {
   const adminButtons = document.querySelectorAll(".js-admin-add");
+  const adminMaxAllBtn = document.getElementById("admin-max-all-btn");
+
+  if (adminMaxAllBtn) {
+    adminMaxAllBtn.addEventListener("click", () => {
+      Object.keys(data.max).forEach((key) => {
+        data.lvls[key] = data.max[key];
+      });
+
+      data.xp = 9999999;
+      data.coins = 9999999;
+      data.gems = 9999999;
+
+      if (data.competition?.unlocked) {
+        data.competition.unlocked.england = true;
+        data.competition.unlocked.netherlands = true;
+        data.competition.unlocked.brazil = true;
+      }
+
+      updateUI();
+      if (typeof saveGame === "function") {
+        saveGame();
+      }
+    });
+  }
 
   adminButtons.forEach((button) => {
     button.addEventListener("click", () => {
@@ -4515,12 +5527,94 @@ function initAdminControls() {
 function initMainButtons() {
   const startMatchButton = document.getElementById("start-match-btn");
   if (startMatchButton) {
-    startMatchButton.addEventListener("click", startGame);
+    startMatchButton.addEventListener("click", () => startGame("normal"));
   }
 
+  const startCompetitionButton = document.getElementById(
+    "start-competition-btn",
+  );
+  if (startCompetitionButton) {
+    startCompetitionButton.addEventListener("click", openCompetitionMenu);
+  }
   const closeSummaryButton = document.getElementById("close-summary-btn");
   if (closeSummaryButton) {
     closeSummaryButton.addEventListener("click", closeSummary);
+  }
+}
+const restartCompetitionBtn = document.getElementById(
+  "restart-competition-btn",
+);
+const saveGameBtn = document.getElementById("save-game-btn");
+
+if (saveGameBtn) {
+  saveGameBtn.addEventListener("click", saveGame);
+}
+
+if (restartCompetitionBtn) {
+  restartCompetitionBtn.addEventListener("click", () => {
+    const overlay = document.getElementById("competition-summary-overlay");
+    if (overlay) overlay.style.display = "none";
+
+    startGame("competition");
+  });
+}
+const closeCompetitionSummaryButton = document.getElementById(
+  "close-competition-summary-btn",
+);
+if (closeCompetitionSummaryButton) {
+  closeCompetitionSummaryButton.addEventListener(
+    "click",
+    closeCompetitionSummary,
+  );
+}
+
+function closeCompetitionSummary() {
+  const overlay = document.getElementById("competition-summary-overlay");
+  if (overlay) overlay.style.display = "none";
+
+  document.getElementById("competition-hud").classList.remove("active");
+  document.getElementById("game-screen").classList.remove("active");
+  document.getElementById("menu-screen").classList.add("active");
+  document.getElementById("admin-ui").style.display = "flex";
+
+  hideCompetitionPlayerCardClone();
+  hideCompetitionEnemyCard();
+  updatePitbullVisibility();
+
+  currentMode = "normal";
+  applyCompetitionVisuals();
+  updateUI();
+
+  openCompetitionMenu();
+}
+
+function applyCompetitionVisuals() {
+  const gameScreen = document.getElementById("game-screen");
+  const opponent = document.getElementById("competition-opponent");
+
+  if (!gameScreen || !opponent) return;
+
+  if (currentMode !== "competition") {
+    gameScreen.style.backgroundImage = 'url("match/pole.png")';
+    opponent.style.display = "none";
+    opponent.src = "";
+    return;
+  }
+
+  const level =
+    competitionLevels[data.competition.currentLevel || 0] ||
+    competitionLevels[0];
+
+  gameScreen.style.backgroundImage = `url("${level.bg}")`;
+
+  opponent.src = level.opponent;
+  opponent.style.display = "block";
+
+  if (level.position) {
+    opponent.style.right = level.position.right + "px";
+    opponent.style.bottom = level.position.bottom + "px";
+    opponent.style.transform = `scale(${level.position.scale || 0.7})`;
+    opponent.style.transformOrigin = "bottom center";
   }
 }
 

@@ -62,6 +62,23 @@ body {
   display: flex; /* Показываем, когда есть класс active */
 }
 
+#competition-enemy-card-wrap {
+  position: fixed;
+  right: 35px;
+  top: 160px;
+  z-index: 40;
+  display: none;
+}
+
+.competition-enemy-portrait {
+  width: 140%;
+  height: 140%;
+  object-fit: cover;
+  object-position: center top;
+  image-rendering: pixelated;
+  transform: translate(-12%, -6%);
+}
+
 .custom-card {
   background: rgba(255, 255, 255, 0.1);
   padding: 30px;
@@ -173,6 +190,447 @@ body {
   text-shadow: 0 0 5px rgba(46, 204, 113, 0.3);
 }
 
+#competition-rewards {
+  margin: 28px 0 18px;
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+}
+
+.competition-reward {
+  width: 180px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 2px solid rgba(255, 255, 255, 0.12);
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 10px;
+}
+
+.competition-reward span {
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.competition-reward b {
+  font-size: 1.3rem;
+  min-width: 60px;
+  text-align: right;
+}
+
+.competition-reward-xp {
+  color: #3498db;
+  border-color: #3498db;
+}
+
+.competition-reward-coin {
+  color: #f1c40f;
+  border-color: #f1c40f;
+}
+
+.competition-reward-gem {
+  color: #6ee7ff;
+  border-color: #6ee7ff;
+}
+
+#competition-summary-overlay .menu-btn {
+  min-width: 220px;
+  margin: 10px;
+  padding: 16px 22px;
+  background: #2ecc71;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  text-shadow: 1px 1px 0 #000;
+  transition: all 0.2s ease;
+  box-shadow: 0 5px 0 #27ae60;
+}
+
+#competition-summary-overlay .menu-btn:hover {
+  background: #2ae17a;
+  transform: translateY(-2px);
+  box-shadow: 0 7px 0 #27ae60;
+}
+
+#competition-summary-overlay .menu-btn:active {
+  transform: translateY(3px);
+  box-shadow: 0 2px 0 #27ae60;
+}
+
+.competition-opponent-name {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.competition-menu-flag {
+  width: 28px;
+  height: 18px;
+  object-fit: cover;
+  border-radius: 3px;
+}
+
+#competition-pitbull {
+  position: absolute;
+  right: 320px;
+  bottom: 120px;
+
+  width: 208px;
+  height: 153px;
+
+  background-image: url("../competition/pitbulls.png");
+  background-repeat: no-repeat;
+  background-position: 0 0;
+  background-size: 420px 310px;
+
+  image-rendering: pixelated;
+  z-index: 35;
+  pointer-events: none;
+
+  transform: scaleX(-1) scale(0.7);
+  transform-origin: bottom center;
+}
+
+#competition-menu-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+
+  background:
+    linear-gradient(rgba(0, 0, 0, 0.65), rgba(0, 0, 0, 0.85)),
+    url("../competition/menu_bg.png");
+
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+
+  align-items: center;
+  justify-content: center;
+}
+
+#competition-menu-overlay .menu-btn {
+  width: 260px;
+  margin-top: 25px;
+  padding: 18px;
+
+  background: #2ecc71;
+  color: white;
+
+  border: none;
+  border-radius: 12px;
+
+  cursor: pointer;
+
+  font-family: inherit;
+  font-size: 1.2rem;
+  font-weight: bold;
+  text-transform: uppercase;
+
+  text-shadow: 1px 1px 0 #000;
+
+  transition: all 0.2s ease;
+
+  box-shadow: 0 5px 0 #27ae60;
+}
+
+#competition-menu-overlay .menu-btn:hover {
+  transform: translateY(-2px);
+}
+
+#competition-menu-overlay .menu-btn:active {
+  transform: translateY(4px);
+  box-shadow: 0 1px 0 #27ae60;
+}
+
+.competition-opponent-preview.selected {
+  border-color: #ffd700 !important;
+
+  transform: translateY(-10px) scale(1.04);
+
+  box-shadow: 0 0 30px rgba(255, 215, 0, 0.45);
+}
+.save-game-wrap {
+  margin-top: 14px;
+  display: flex;
+  justify-content: center;
+}
+
+.save-game-btn {
+  min-width: 120px;
+  padding: 8px 12px;
+  font-size: 0.8rem;
+  margin-top: 9px;
+}
+
+.competition-menu-screen {
+  width: 90%;
+  max-width: 1400px;
+  height: 85%;
+
+  background: rgba(10, 10, 20, 0.82);
+
+  border: 4px solid #ffd700;
+  border-radius: 30px;
+  padding: 40px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  box-shadow:
+    0 0 30px rgba(255, 215, 0, 0.45),
+    inset 0 0 30px rgba(255, 255, 255, 0.05);
+}
+
+.competition-menu-title {
+  font-size: 3rem;
+  font-weight: bold;
+  color: #ffd700;
+  text-shadow:
+    0 0 10px #ffae00,
+    0 0 20px #ff6a00;
+
+  margin-bottom: 10px;
+}
+
+.competition-menu-subtitle {
+  font-size: 1.3rem;
+  color: white;
+  margin-bottom: 40px;
+  opacity: 0.85;
+}
+
+.competition-opponents-list {
+  width: 100%;
+
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+
+  margin-top: 30px;
+  margin-bottom: 40px;
+}
+
+.competition-opponent-preview {
+  width: 320px;
+  height: 480px;
+
+  background: rgba(255, 255, 255, 0.06);
+
+  border: 3px solid rgba(255, 255, 255, 0.15);
+  border-radius: 24px;
+
+  overflow: hidden;
+
+  transition: 0.25s;
+  cursor: pointer;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.competition-opponent-preview > img {
+  width: 100%;
+  height: 360px;
+  object-fit: cover;
+}
+
+.competition-opponent-preview.active:hover {
+  transform: translateY(-10px) scale(1.03);
+
+  border-color: #ffd700;
+
+  box-shadow: 0 0 25px rgba(255, 215, 0, 0.35);
+}
+
+.competition-opponent-name {
+  margin-top: 18px;
+
+  font-size: 1.6rem;
+  font-weight: bold;
+  color: white;
+}
+
+.competition-opponent-desc {
+  margin-top: 10px;
+
+  font-size: 1rem;
+  color: #cccccc;
+}
+
+.competition-opponent-preview.locked {
+  filter: grayscale(1) brightness(0.4);
+}
+
+#competition-summary-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.9);
+  z-index: 10000;
+  align-items: center;
+  justify-content: center;
+}
+
+.competition-summary-card {
+  width: 620px;
+  background: #111827;
+  border: 4px solid #00d9ff;
+  border-radius: 22px;
+  padding: 30px;
+  text-align: center;
+  color: white;
+}
+
+#competition-result-title {
+  font-size: 2rem;
+  margin: 0 0 26px;
+}
+
+.competition-result-score {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 28px;
+  margin-bottom: 28px;
+}
+
+.competition-result-score div {
+  flex: 1;
+}
+
+.competition-result-score span {
+  display: block;
+  opacity: 0.75;
+  margin-bottom: 10px;
+}
+
+.competition-result-score b {
+  font-size: 2rem;
+  color: #6ee7ff;
+}
+
+.competition-result-vs {
+  flex: 0 0 auto !important;
+  font-size: 1.4rem;
+  color: #f7e708;
+}
+
+#competition-player-card-clone-wrap {
+  position: fixed;
+  left: 35px;
+  top: 160px;
+  z-index: 40;
+  display: none;
+}
+
+#competition-hud {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+
+  width: 1200px;
+  display: none;
+  z-index: 50;
+}
+
+#competition-hud.active {
+  display: block;
+}
+
+.competition-hud-wrap {
+  display: grid;
+  grid-template-columns: 280px 1fr 280px;
+  align-items: start;
+  gap: 20px;
+}
+
+.competition-side {
+  display: flex;
+}
+
+.competition-side-left {
+  justify-content: flex-start;
+}
+
+.competition-side-right {
+  justify-content: flex-end;
+}
+
+.competition-card {
+  width: 230px;
+  min-height: 150px;
+  background: rgba(0, 0, 0, 0.82);
+  border: 2px solid #2ecc71;
+  border-radius: 18px;
+  padding: 14px 16px;
+  box-sizing: border-box;
+  box-shadow: 0 0 14px rgba(0, 0, 0, 0.35);
+}
+
+#competition-enemy-card {
+  border-color: #00d9ff;
+  box-shadow: 0 0 14px rgba(0, 217, 255, 0.2);
+}
+
+.competition-card-title {
+  font-size: 12px;
+  margin-bottom: 10px;
+  opacity: 0.9;
+}
+
+.competition-card-name {
+  font-size: 18px;
+  margin-bottom: 14px;
+  color: #ffffff;
+  word-break: break-word;
+}
+
+.competition-card-score {
+  font-size: 20px;
+  color: #ffffff;
+}
+
+.competition-card-score span {
+  color: #6ee7ff;
+}
+
+.competition-center {
+  display: flex;
+  justify-content: center;
+}
+
+.competition-timer-box {
+  min-width: 260px;
+  text-align: center;
+  padding-top: 16px;
+}
+
+#competition-timer-text {
+  font-family: "Press Start 2P", cursive;
+  font-size: 26px;
+  color: #f7e708;
+  text-shadow:
+    -2px -2px 0 #000,
+    2px -2px 0 #000,
+    -2px 2px 0 #000,
+    2px 2px 0 #000,
+    4px 4px 0 rgba(0, 0, 0, 0.5);
+}
+
 #game-screen {
   position: relative;
   width: 1200px;
@@ -186,6 +644,23 @@ body {
 
   margin: 10px auto 0 auto;
 }
+
+#game-screen.competition-mode {
+  background-image: url("../competition/England.png");
+}
+
+#competition-opponent {
+  position: absolute;
+  right: 180px;
+  bottom: 70px;
+  width: 140px;
+  height: auto;
+  display: none;
+  image-rendering: pixelated;
+  z-index: 20;
+  pointer-events: none;
+}
+
 /* Контейнер всего футболиста */
 /* 1. ГЛАВНЫЙ КОНТЕЙНЕР ИГРОКА НА ПОЛЕ */
 .player-container {
@@ -756,6 +1231,18 @@ body {
   transform: translate(-50%, -50%);
 }
 
+#game-screen.competition-mode .player-container {
+  left: 28% !important;
+  top: 71% !important;
+  transform: translate(-50%, -50%) scale(0.8) !important;
+}
+
+#game-screen.competition-mode #friend-animation {
+  left: 40%;
+  top: 77%;
+  transform: translate(-50%, -50%) scaleX(1) !important;
+}
+
 .kiosk-item {
   position: absolute;
   bottom: 47%; /* Располагаем в нижней части поля по бокам */
@@ -1231,6 +1718,10 @@ body {
   left: calc(140px + var(--offset-x));
   top: 420px;
 }
+#node-friendSpeed {
+  left: calc(140px + var(--offset-x));
+  top: 540px;
+}
 #node-f-sec {
   left: calc(260px + var(--offset-x));
   top: 180px;
@@ -1394,6 +1885,56 @@ body {
   background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
   border-color: #fff;
 }
+.menu-side-panels {
+  position: fixed;
+  top: 110px;
+  left: 84px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  z-index: 25;
+}
+
+.menu-info-card {
+  width: 180px;
+  background: linear-gradient(180deg, #2b2b38 0%, #17171f 100%);
+  border: 2px solid #36f59c;
+  border-radius: 14px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
+  padding: 10px 12px;
+  color: white;
+}
+
+.menu-info-title {
+  text-align: center;
+  font-size: 0.95rem;
+  font-weight: bold;
+  color: #f5d76e;
+  margin-bottom: 8px;
+}
+
+.menu-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.82rem;
+  padding: 5px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.menu-info-row:last-child {
+  border-bottom: none;
+}
+
+.menu-info-row span {
+  white-space: nowrap;
+}
+
+.menu-info-row b {
+  margin-left: 8px;
+  white-space: nowrap;
+}
+
 .player-name-block {
   margin-bottom: 16px;
 }
@@ -1433,10 +1974,10 @@ body {
 .player-card {
   width: 210px;
   background: linear-gradient(180deg, #2b2b38 0%, #17171f 100%);
-  border: 3px solid #f5d76e;
+  border: 3px solid #666;
   border-radius: 18px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
-  padding: 12px 12px 10px;
+  padding: 12px 12px 12px;
   color: white;
   position: relative;
 }
@@ -1517,11 +2058,14 @@ body {
   font-size: 1rem;
   font-weight: bold;
   letter-spacing: 1px;
-  margin-top: 2px;
+  margin-top: 4px;
   margin-bottom: 10px;
   color: #f5d76e;
   text-transform: uppercase;
-  word-break: break-word;
+
+  white-space: nowrap; /* ❗ запрет переноса */
+  overflow: hidden; /* ❗ скрыть лишнее */
+  text-overflow: ellipsis; /* ❗ ... в конце */
 }
 
 .player-card-stats {
@@ -1616,6 +2160,7 @@ body {
     0 0 18px rgba(155, 224, 255, 0.15);
   position: relative;
   overflow: hidden;
+  animation: platinumBorderPulse 2.2s ease-in-out infinite alternate;
 }
 .card-platinum::before {
   content: "";
@@ -1639,6 +2184,20 @@ body {
   text-shadow: 0 0 3px rgba(155, 224, 255, 0.3);
 }
 
+@keyframes platinumBorderPulse {
+  0% {
+    border-color: #7fcce8;
+    box-shadow:
+      0 0 8px rgba(155, 224, 255, 0.22),
+      0 0 14px rgba(155, 224, 255, 0.08);
+  }
+  100% {
+    border-color: #d8f4ff;
+    box-shadow:
+      0 0 14px rgba(155, 224, 255, 0.5),
+      0 0 24px rgba(155, 224, 255, 0.22);
+  }
+}
 /* DIAMOND */
 .card-diamond {
   border-color: #00e1ff;
@@ -1683,6 +2242,42 @@ body {
 
 .card-diamond .player-card-header {
   text-shadow: 0 0 4px rgba(0, 255, 255, 0.6);
+}
+
+.border-early-base {
+  border-color: #666666;
+}
+
+.border-early-bronze {
+  border-color: #b87333;
+}
+
+.border-early-silver {
+  border-color: #bfc5cc;
+}
+
+.border-early-gold {
+  border-color: #f5d76e;
+}
+
+.border-bronze {
+  border-color: #cd7f32;
+}
+
+.border-silver {
+  border-color: #c0c0c0;
+}
+
+.border-gold {
+  border-color: #f5d76e;
+}
+
+.border-platinum {
+  border-color: #9be0ff;
+}
+
+.border-diamond {
+  border-color: #00e1ff;
 }
 
 .boot-screen {
@@ -1757,17 +2352,99 @@ body {
   margin: 15px 0;
 }
 
+.game-message-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.game-message-card {
+  width: 520px;
+  padding: 34px;
+  background: #111827;
+  border: 4px solid #2ecc71;
+  border-radius: 22px;
+  color: white;
+  text-align: center;
+  box-shadow: 0 0 25px rgba(46, 204, 113, 0.45);
+}
+
+.game-message-card h2 {
+  margin-top: 0;
+  color: #2ecc71;
+  font-size: 2rem;
+}
+
+.game-message-card p {
+  line-height: 1.5;
+  margin: 20px 0 28px;
+}
+
 .start-game-btn--full {
   margin-top: 20px;
   width: 100%;
+
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+#start-competition-btn {
+  min-width: 220px;
 }
 
 .start-match-btn {
+  min-width: 260px;
+  padding: 18px 22px;
+
   background: #2ecc71;
   color: white;
+
   border: none;
-  padding: 15px 60px;
-  font-weight: bold;
-  border-radius: 50px;
+  border-radius: 12px;
+
   cursor: pointer;
+
+  font-family: inherit;
+  font-size: 1.2rem;
+  font-weight: bold;
+  text-transform: uppercase;
+
+  text-shadow: 1px 1px 0 #000;
+
+  transition: all 0.2s ease;
+
+  box-shadow: 0 5px 0 #27ae60;
+}
+
+.start-match-btn:hover {
+  background: #2ae17a;
+  transform: translateY(-2px);
+  box-shadow: 0 7px 0 #27ae60;
+}
+
+.start-match-btn:active {
+  transform: translateY(3px);
+  box-shadow: 0 2px 0 #27ae60;
+}
+
+#competition-opponent {
+  position: absolute;
+  right: 110px;
+  bottom: 70px;
+  width: 170px;
+  height: auto;
+  display: none;
+  image-rendering: pixelated;
+  z-index: 25;
+  pointer-events: none;
+}
+
+#game-screen.competition-mode #competition-opponent {
+  right: 150px; /* двигаешь влево/вправо */
+  bottom: 90px; /* двигаешь вверх/вниз */
 }

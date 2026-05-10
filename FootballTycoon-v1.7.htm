@@ -30,14 +30,14 @@
 
   <div class="player-name-block">
     <div class="color-selection-title">ИМЯ ИГРОКА</div>
-    <input
-      id="player-name-input"
-      class="player-name-input"
-      type="text"
-      maxlength="16"
-      placeholder="Введите имя"
-      value="PLAYER"
-    />
+   <input
+  id="player-name-input"
+  class="player-name-input"
+  type="text"
+  maxlength="12"
+  placeholder="Введите имя"
+  value="PLAYER"
+/>
   </div>
 
   <div class="flag-selection-block">
@@ -303,6 +303,78 @@
     <div class="container">
    <div id="menu-screen" class="screen active">
   <div class="currency-bar">
+    <div class="menu-side-panels">
+  <div class="menu-info-card" id="records-card">
+    <div class="menu-info-title">РЕКОРДЫ</div>
+
+    <div class="menu-info-row">
+      <span>XP</span>
+      <b id="record-xp">0</b>
+    </div>
+
+    <div class="menu-info-row" id="record-coins-row" style="display:none;">
+      <span>Монеты</span>
+      <b id="record-coins">0</b>
+    </div>
+
+    <div class="menu-info-row" id="record-gems-row" style="display:none;">
+      <span>Кристаллы</span>
+      <b id="record-gems">0</b>
+    </div>
+
+    <div class="menu-info-row">
+      <span>Время</span>
+      <b id="record-time">0с</b>
+    </div>
+  </div>
+
+  <div class="menu-info-card" id="last-run-card">
+    <div class="menu-info-title">ПОСЛЕДНИЙ МАТЧ</div>
+
+    <div class="menu-info-row">
+      <span>XP</span>
+      <b id="last-xp">0</b>
+    </div>
+
+    <div class="menu-info-row" id="last-coins-row" style="display:none;">
+      <span>Монеты</span>
+      <b id="last-coins">0</b>
+    </div>
+
+    <div class="menu-info-row" id="last-gems-row" style="display:none;">
+      <span>Кристаллы</span>
+      <b id="last-gems">0</b>
+    </div>
+
+    <div class="menu-info-row">
+      <span>Время</span>
+      <b id="last-time">0с</b>
+    </div>
+  </div>
+  <div class="menu-info-card" id="total-stats-card">
+  <div class="menu-info-title">ВСЕГО</div>
+
+  <div class="menu-info-row">
+    <span>XP</span>
+    <b id="total-earned-xp">0</b>
+  </div>
+
+  <div class="menu-info-row" id="total-earned-coins-row" style="display:none;">
+    <span>Монеты</span>
+    <b id="total-earned-coins">0</b>
+  </div>
+
+  <div class="menu-info-row" id="total-earned-gems-row" style="display:none;">
+    <span>Кристаллы</span>
+    <b id="total-earned-gems">0</b>
+  </div>
+
+  <div class="menu-info-row">
+    <span>Время</span>
+    <b id="total-earned-time">0с</b>
+  </div>
+</div>
+</div>
     <div class="xp-val">🔹 XP: <span id="total-xp">0</span></div>
     <div class="coin-val">🟡 COINS: <span id="total-coins">0</span></div>
     <div class="gem-val">💎 GEM: <span id="total-gems">0</span></div>
@@ -356,11 +428,20 @@
   </div>
 </div>
 
-  <button id="start-match-btn" class="start-match-btn">
-    НАЧАТЬ МАТЧ
-  </button>
+<div class="menu-buttons">
+  <div class="start-game-btn--full">
+    <button id="start-match-btn" class="start-match-btn">
+      НАЧАТЬ МАТЧ
+    </button>
+
+    <button id="start-competition-btn" class="start-match-btn" style="display:none;">
+      ⚔️ СОРЕВНОВАНИЕ
+    </button>
+  </div>
 </div>
-      <div id="top-stats-ui" class="screen">
+</div>
+
+<div id="top-stats-ui" class="screen">
   <div class="top-stats-bar">
     <div class="top-stat-box" id="top-box-left">
       <div class="top-stat-line" id="row-top-damage">СИЛА УДАРА: <b id="top-stat-damage">1</b></div>
@@ -468,7 +549,13 @@
   >
     🟡 0
   </div>
-
+<img
+  id="competition-opponent"
+  src=""
+  alt="Opponent"
+  draggable="false"
+  style="display:none;"
+/>
   <div id="friend-animation"></div>
 </div>
 
