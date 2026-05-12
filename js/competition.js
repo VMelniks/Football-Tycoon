@@ -208,7 +208,7 @@ function openCompetitionMenu() {
   BRAZIL
 </div>
           <div class="competition-opponent-desc">
-            ${data.competition.unlocked.brazil ? "Ronny • 92 OVR" : "LOCKED"}
+            ${data.competition.unlocked.brazil ? "Ronny • 95 OVR" : "LOCKED"}
           </div>
         </div>
       </div>

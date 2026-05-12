@@ -352,6 +352,14 @@
               <span>🐖 Свинка</span>
               <span id="res-coin-piggy">0</span>
             </div>
+            <div
+  class="summary-row"
+  id="row-res-dog-coin"
+  style="display: none"
+>
+  <span>🐕 Друг</span>
+  <span id="res-coin-dog">0</span>
+</div>
 
             <div class="summary-row" id="row-res-drink" style="display: none">
               <span>🥤 Напитки</span>
@@ -427,6 +435,15 @@
               <span>🐖 Свинка</span>
               <span id="res-gem-piggy">0</span>
             </div>
+<div
+  class="summary-row"
+  id="row-res-gem-dog"
+  style="display: none"
+>
+  <span>🐕 Друг</span>
+  <span id="res-gem-dog">0</span>
+</div>
+
             <div class="summary-row" id="row-res-gem-vip" style="display: none">
               <span>👑 VIP</span>
               <span id="res-gem-vip">0</span>
@@ -619,6 +636,13 @@
         </div>
         <div class="menu-buttons">
           <div class="start-game-btn--full">
+            <button
+  id="open-prestige-btn"
+  class="start-match-btn prestige-menu-btn"
+  style="display: none"
+>
+  💎 ПРЕСТИЖ
+</button>
             <button id="start-match-btn" class="start-match-btn">
               НАЧАТЬ МАТЧ
             </button>
@@ -809,8 +833,49 @@
 <div id="competition-pitbull" style="display:none;"></div>
     </div>
 
+    <div id="prestige-screen" class="screen">
+  <div class="prestige-wrap">
+    <div class="prestige-top">
+      <button id="close-prestige-btn" class="prestige-btn">← НАЗАД</button>
+
+      <div class="prestige-gems-box">
+        ГЕМОВ ДОСТУПНО: <span id="prestige-gems">0</span>
+      </div>
+
+      <button id="prestige-reset-btn" class="prestige-btn">
+        ПЕРЕРОДИТЬСЯ
+      </button>
+    </div>
+
+    <div class="prestige-tree">
+      <div class="prestige-column prestige-column-player">
+        <div class="prestige-avatar prestige-avatar-player" id="prestige-avatar-player"></div>
+
+        <div id="prestige-playerPower" class="prestige-node"></div>
+        <div id="prestige-playerCritChance" class="prestige-node"></div>
+        <div id="prestige-playerCritPower" class="prestige-node"></div>
+        <div id="prestige-superReaction" class="prestige-node"></div>
+        <div id="prestige-specialCrits" class="prestige-node"></div>
+        <div id="prestige-speedDemon" class="prestige-node prestige-node-wide"></div>
+      </div>
+
+      <div class="prestige-column prestige-column-dog">
+        <div class="prestige-avatar prestige-avatar-dog" id="prestige-avatar-dog"></div>
+
+        <div id="prestige-dogPower" class="prestige-node"></div>
+        <div id="prestige-dogCritChance" class="prestige-node"></div>
+        <div id="prestige-dogCritPower" class="prestige-node"></div>
+        <div id="prestige-searchDog" class="prestige-node"></div>
+        <div id="prestige-midasDog" class="prestige-node"></div>
+        <div id="prestige-madDog" class="prestige-node"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
     <script></script>
     <script src="js/game.js"></script>
     <script src="js/competition.js"></script>
+    <script src="js/prestige.js"></script>
   </body>
 </html>

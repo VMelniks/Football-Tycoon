@@ -475,7 +475,9 @@ function createExtraBall() {
 }
 
 function getExtraBallLifeTime() {
-  return 750 + (data.lvls.specialReaction || 0) * 250;
+  const prestigeBonus = (prestigeData.skills.superReaction || 0) * 250;
+
+  return 750 + (data.lvls.specialReaction || 0) * 250 + prestigeBonus;
 }
 
 function updateMultiBalls() {
@@ -539,7 +541,9 @@ function updateExtraBallLife() {
 }
 
 function getMainBallLifeTime() {
-  return 750 + (data.lvls.reaction || 0) * 250;
+  const prestigeBonus = (prestigeData.skills.superReaction || 0) * 250;
+
+  return 750 + (data.lvls.reaction || 0) * 250 + prestigeBonus;
 }
 
 function scheduleMainBallMove(delay = null) {
@@ -1503,7 +1507,7 @@ let data = {
     shockwave: 100,
     freezing: 100,
     freezingTime: 200,
-    competition: 10000,
+    competition: 1000,
   },
 };
 
@@ -1965,39 +1969,52 @@ function renderPlayerCardPreview() {
 function calculateOVR() {
   const lvls = data?.lvls || {};
 
+  const prestigeSkills =
+    typeof prestigeData !== "undefined" && prestigeData.skills
+      ? prestigeData.skills
+      : {};
+
   const equipBonuses = [0, 2, 5, 10];
   const clickPower = (lvls.click || 0) + (equipBonuses[lvls.equip || 0] || 0);
 
   const coachBonusPerPlayer = (lvls.coach || 0) * 2;
   const footyTotal = (lvls.footy || 0) * (4 + coachBonusPerPlayer);
+
   const friendBase = lvls.friend || 0;
   const friendBonus = (lvls.friendPower || 0) * 2;
   const teamVal = friendBase + friendBonus + footyTotal;
 
-  const critLevel = lvls.crit || 0;
-  const reactionLevel = lvls.reaction || 0;
-  const specialReactionLevel = lvls.specialReaction || 0;
-  const reflexLevel = lvls.reflex || 0;
+  const prestigePowerBonuses = [0, 4, 9, 15];
+  const prestigeDogPowerBonuses = [0, 3, 7, 12];
 
   let ovr =
     clickPower +
     Math.floor(teamVal / 3) +
-    critLevel * 4 +
-    reactionLevel * 3 +
-    specialReactionLevel * 3 +
-    reflexLevel * 5;
+    (lvls.crit || 0) * 2 +
+    (lvls.reaction || 0) * 2 +
+    (lvls.specialReaction || 0) * 1 +
+    (lvls.reflex || 0) * 4;
 
-  // ⭐ бонусы за перки
-  if ((lvls.fCrit || 0) === 3) {
-    ovr += 1;
-  }
+  // обычные бонусы
+  if ((lvls.fCrit || 0) === 3) ovr += 1;
+  if ((lvls.specialCrit || 0) === 3) ovr += 1;
+  if ((lvls.delay || 0) === 3) ovr += 1;
+  if ((lvls.friendSpeed || 0) === 5) ovr += 2;
 
-  if ((lvls.specialCrit || 0) === 3) {
-    ovr += 1;
-  }
-  if ((lvls.delay || 0) === 3) {
-    ovr += 1;
-  }
+  // престиж игрока
+  ovr += Math.floor(
+    (prestigePowerBonuses[prestigeSkills.playerPower || 0] || 0) / 2,
+  );
+  ovr += (prestigeSkills.playerCritChance || 0) * 2;
+  ovr += Math.floor((prestigeSkills.playerCritPower || 0) / 3);
+  ovr += (prestigeSkills.superReaction || 0) * 3;
+  ovr += (prestigeSkills.speedDemon || 0) * 5;
+
+  // престиж друга
+  ovr += Math.floor(
+    (prestigeDogPowerBonuses[prestigeSkills.dogPower || 0] || 0) / 3,
+  );
+  ovr += (prestigeSkills.madDog || 0) * 2;
 
   return Math.floor(ovr);
 }
@@ -2010,7 +2027,10 @@ function updatePlayerCardOVR() {
   ovrEl.innerText = ovr;
   updateCardStyle(ovr);
 }
+
 function getCardTier(ovr) {
+  if (ovr >= 110) return "legend";
+  if (ovr >= 100) return "icon";
   if (ovr >= 95) return "diamond";
   if (ovr >= 85) return "platinum";
   if (ovr >= 75) return "gold";
@@ -2018,7 +2038,10 @@ function getCardTier(ovr) {
   if (ovr >= 50) return "bronze";
   return "base";
 }
+
 function getCardBorderTier(ovr) {
+  if (ovr >= 110) return "legend";
+  if (ovr >= 100) return "icon";
   if (ovr >= 95) return "diamond";
   if (ovr >= 85) return "platinum";
   if (ovr >= 75) return "gold";
@@ -2045,6 +2068,8 @@ function updateCardStyle(ovr) {
     "card-gold",
     "card-platinum",
     "card-diamond",
+    "card-icon",
+    "card-legend",
 
     "border-early-base",
     "border-early-bronze",
@@ -2055,6 +2080,8 @@ function updateCardStyle(ovr) {
     "border-gold",
     "border-platinum",
     "border-diamond",
+    "border-icon",
+    "border-legend",
   );
 
   card.classList.add("card-" + tier);
@@ -2067,7 +2094,6 @@ function updatePlayerFlag() {
 
   flagEl.src = `flags/${playerSettings.country}.png`;
 }
-
 function updatePlayerCardStats() {
   const clickStat = document.getElementById("card-stat-click");
   const critStat = document.getElementById("card-stat-crit");
@@ -2079,21 +2105,39 @@ function updatePlayerCardStats() {
   const reflexStat = document.getElementById("card-stat-reflex");
 
   const lvls = data?.lvls || {};
+  const prestigeSkills =
+    typeof prestigeData !== "undefined" && prestigeData.skills
+      ? prestigeData.skills
+      : {};
 
-  const equipBonuses = [0, 2, 5, 10];
-  const damageVal = (lvls.click || 0) + (equipBonuses[lvls.equip || 0] || 0);
+  const damageVal =
+    typeof getPlayerKickPower === "function"
+      ? getPlayerKickPower()
+      : lvls.click || 0;
 
-  const critVal = (lvls.crit || 0) * 3;
+  const critVal =
+    (lvls.crit || 0) * 2 + (prestigeSkills.playerCritChance || 0) * 2;
 
   const coachBonusPerPlayer = (lvls.coach || 0) * 2;
   const footyTotal = (lvls.footy || 0) * (4 + coachBonusPerPlayer);
+
+  const dogPowerBonuses = [0, 3, 7, 12];
+  const prestigeDogPower = dogPowerBonuses[prestigeSkills.dogPower || 0] || 0;
+
   const friendBase = lvls.friend || 0;
   const friendBonus = (lvls.friendPower || 0) * 2;
-  const teamVal = friendBase + friendBonus + footyTotal;
+  const teamVal = friendBase + friendBonus + prestigeDogPower + footyTotal;
 
-  const reactionVal = (0.75 + (lvls.reaction || 0) * 0.25).toFixed(2) + "с";
+  const prestigeReactionBonus = (prestigeSkills.superReaction || 0) * 0.25;
+
+  const reactionVal =
+    (0.75 + (lvls.reaction || 0) * 0.25 + prestigeReactionBonus).toFixed(2) +
+    "с";
+
   const specialReactionVal =
-    (0.75 + (lvls.specialReaction || 0) * 0.25).toFixed(2) + "с";
+    (0.75 + (lvls.specialReaction || 0) * 0.25 + prestigeReactionBonus).toFixed(
+      2,
+    ) + "с";
 
   let reflexVal = "0";
   if ((lvls.reflex || 0) > 0) {
@@ -2458,15 +2502,19 @@ function showCompetitionEnemyCard() {
 
   let cardClass = "card-base";
 
-  if (enemy.ovr >= 90) {
+  if (enemy.ovr >= 110) {
+    cardClass = "card-legend";
+  } else if (enemy.ovr >= 100) {
+    cardClass = "card-icon";
+  } else if (enemy.ovr >= 95) {
     cardClass = "card-diamond";
   } else if (enemy.ovr >= 85) {
     cardClass = "card-platinum";
   } else if (enemy.ovr >= 75) {
     cardClass = "card-gold";
-  } else if (enemy.ovr >= 60) {
+  } else if (enemy.ovr >= 65) {
     cardClass = "card-silver";
-  } else if (enemy.ovr >= 40) {
+  } else if (enemy.ovr >= 50) {
     cardClass = "card-bronze";
   }
 
@@ -2538,6 +2586,7 @@ function saveGame() {
       playerSettings,
       matchHistory,
       playerCreated,
+      prestigeData,
       savedAt: Date.now(),
     };
 
@@ -2576,7 +2625,6 @@ function loadGame() {
         ...saveData.playerSettings,
       };
     }
-
     if (saveData.matchHistory) {
       matchHistory = {
         records: {
@@ -2594,6 +2642,17 @@ function loadGame() {
       };
     }
 
+    if (saveData.prestigeData && typeof prestigeData !== "undefined") {
+      prestigeData = {
+        ...prestigeData,
+        ...saveData.prestigeData,
+
+        skills: {
+          ...prestigeData.skills,
+          ...(saveData.prestigeData.skills || {}),
+        },
+      };
+    }
     playerCreated = !!saveData.playerCreated;
 
     currentFlagIndex = AVAILABLE_FLAGS.indexOf(playerSettings.country);
@@ -2742,7 +2801,7 @@ function updateUI() {
 
     if (n.k === "synergy") canSee = data.lvls.crystalBall >= 1;
 
-    if (canSee) el.classList.add("visible");
+    el.classList.toggle("visible", canSee);
     el.classList.toggle("maxed", isMax);
     document.getElementById(`lvl-${n.k}`).innerText = isMax
       ? "MAX"
@@ -2752,7 +2811,7 @@ function updateUI() {
     document.getElementById(`c-${n.k}`).innerHTML = isMax
       ? "✓"
       : n.k === "competition"
-        ? `🟡 10k<br>🔹100k`
+        ? `🟡 1k<br>🔹100k`
         : `${icon} ${data.costs[n.k]}`;
 
     if (!isMax) {
@@ -2763,6 +2822,10 @@ function updateUI() {
   updateLiveStats();
   updatePlayerCardStats();
   updateCompetitionButton();
+
+  if (typeof updatePrestigeButton === "function") {
+    updatePrestigeButton();
+  }
 }
 
 function centerTreeOnClickNode() {
@@ -2787,7 +2850,7 @@ function buy(type, cur) {
   if (data.lvls[type] >= data.max[type]) return;
 
   if (type === "competition") {
-    const costCoin = 10000;
+    const costCoin = 1000;
     const costXP = 100000;
 
     if (data.coins >= costCoin && data.xp >= costXP) {
@@ -2847,21 +2910,71 @@ function buy(type, cur) {
     }
   }
 }
-function showGameMessage(title, text) {
+
+function showGameMessage(title, text, buttons = null) {
   const box = document.createElement("div");
   box.className = "game-message-overlay";
+
+  let buttonsHTML = "";
+
+  if (buttons && buttons.length > 0) {
+    buttonsHTML = `
+      <div class="game-message-buttons">
+        ${buttons
+          .map(
+            (btn, i) => `
+          <button class="${btn.className || "menu-btn"}" data-btn-index="${i}">
+            ${btn.text}
+          </button>
+        `,
+          )
+          .join("")}
+      </div>
+    `;
+  } else {
+    buttonsHTML = `
+      <button class="menu-btn game-message-ok">
+        OK
+      </button>
+    `;
+  }
 
   box.innerHTML = `
     <div class="game-message-card">
       <h2>${title}</h2>
       <p>${text}</p>
-      <button class="menu-btn" onclick="this.closest('.game-message-overlay').remove()">
-        OK
-      </button>
+
+      ${buttonsHTML}
     </div>
   `;
 
   document.body.appendChild(box);
+
+  // ОБЫЧНЫЙ OK
+  const okBtn = box.querySelector(".game-message-ok");
+
+  if (okBtn) {
+    okBtn.addEventListener("click", () => {
+      box.remove();
+    });
+  }
+
+  // КАСТОМНЫЕ КНОПКИ
+  if (buttons && buttons.length > 0) {
+    buttons.forEach((btn, index) => {
+      const el = box.querySelector(`[data-btn-index="${index}"]`);
+
+      if (!el) return;
+
+      el.addEventListener("click", () => {
+        if (btn.onClick) {
+          btn.onClick();
+        }
+
+        box.remove();
+      });
+    });
+  }
 }
 
 let gInt,
@@ -2899,6 +3012,8 @@ let gInt,
   sMidasCoins,
   sVipGems,
   sCrystalTimeGems,
+  sDogCoins,
+  sDogGems,
   actualViewerCount;
 let extraBalls = [];
 let clonePiggies = [];
@@ -3036,7 +3151,7 @@ const competitionLevels = [
     key: "brazil",
     country: "Brazil",
     name: "Ronny",
-    ovr: 92,
+    ovr: 95,
     bg: "competition/Brazil.png",
     opponent: "competition/opponent_bra.png",
     flag: "flags/br.png",
@@ -3047,7 +3162,7 @@ const competitionLevels = [
     },
 
     stats: {
-      power: 10,
+      power: 20,
       critChance: 0.05,
       critMult: 50,
       speed: 0.05,
@@ -3076,7 +3191,14 @@ function applyMatchModeView() {
 }
 
 function getReflexInterval() {
-  return [0, 300, 250, 200, 150, 100][data.lvls.reflex || 0] || 0;
+  let interval = [0, 300, 250, 200, 150, 100][data.lvls.reflex || 0] || 0;
+
+  // Демон скорости
+  if (interval > 0 && (prestigeData.skills.speedDemon || 0) > 0) {
+    interval = Math.floor(interval / 2);
+  }
+
+  return interval;
 }
 
 function refreshMatchRuntimeUI() {
@@ -3210,6 +3332,22 @@ function initBootScreen() {
 }
 
 document.addEventListener("DOMContentLoaded", initBootScreen);
+
+function getPlayerKickPower() {
+  const equipBonuses = [0, 2, 5, 10];
+  const prestigeSkills =
+    typeof prestigeData !== "undefined" && prestigeData.skills
+      ? prestigeData.skills
+      : {};
+
+  const prestigePowerBonuses = [0, 4, 9, 15];
+  const prestigePlayerPower =
+    prestigePowerBonuses[prestigeSkills.playerPower || 0] || 0;
+
+  return (
+    data.lvls.click + (equipBonuses[data.lvls.equip] || 0) + prestigePlayerPower
+  );
+}
 
 // =================================
 // FREEZING, TELEKINESIS, SHOCKWAVE и связанные механики
@@ -3398,8 +3536,7 @@ function applyTelekinesis(sourceElement, sourceEvent) {
   playSound(sounds.telekinesis, 0.2, false);
   playTelekinesisImpact(target);
 
-  const equipBonuses = [0, 2, 5, 10];
-  let p = data.lvls.click + (equipBonuses[data.lvls.equip] || 0);
+  let p = getPlayerKickPower();
 
   spawnFloatingText("TELE HIT", targetPos.x, targetPos.y - 25, "tele");
 
@@ -3675,8 +3812,7 @@ function applyShockwaveHitToTarget(target) {
   const targetPos = getElementCenter(target);
   playShockwaveImpact(target);
 
-  const equipBonuses = [0, 2, 5, 10];
-  let p = data.lvls.click + (equipBonuses[data.lvls.equip] || 0);
+  let p = getPlayerKickPower();
 
   if (target.id === "piggy" && piggyState.active) {
     piggyState.hp -= p;
@@ -4047,6 +4183,8 @@ function startGame(mode = "normal") {
     sCrystalTimeGems =
     actualViewerCount =
     competitionPenalty =
+    sDogCoins =
+    sDogGems =
     sCompetitionDrain =
       0;
 
@@ -4229,6 +4367,7 @@ function startGame(mode = "normal") {
     }
   }, 10);
 
+  let friendXpForSearchGem = 0;
   let friendTickCounter = 0;
 
   aInt = setInterval(() => {
@@ -4248,17 +4387,35 @@ function startGame(mode = "normal") {
 
       let neededTicks = baseTicks - bonus;
 
-      if (neededTicks < 2) neededTicks = 2; // ограничение
+      if ((prestigeData?.skills?.madDog || 0) > 0) {
+        neededTicks -= 2;
+      }
+
+      if (neededTicks < 1) neededTicks = 1;
 
       if (friendTickCounter >= neededTicks) {
-        let fPower = data.lvls.friend + (data.lvls.friendPower || 0) * 2;
+        const dogPowerBonuses = [0, 3, 7, 12];
+        const dogCritChanceBonus =
+          (prestigeData?.skills?.dogCritChance || 0) * 5;
+        const dogCritPowerBonus = prestigeData?.skills?.dogCritPower || 0;
+
+        let fPower =
+          data.lvls.friend +
+          (data.lvls.friendPower || 0) * 2 +
+          (dogPowerBonuses[prestigeData?.skills?.dogPower || 0] || 0);
+
         let isFriendCrit = false;
         let gotCoin = false;
         let coinAmt = 1;
 
+        const friendCritChance =
+          (data.lvls.fCrit || 0) * 5 + dogCritChanceBonus;
+
+        const friendCritMultiplier = 3 + dogCritPowerBonus;
+
         // ПРОВЕРКА КРИТА ДРУГА
-        if (Math.random() * 100 < data.lvls.fCrit * 10) {
-          fPower *= 3;
+        if (Math.random() * 100 < friendCritChance) {
+          fPower *= friendCritMultiplier;
           isFriendCrit = true;
 
           if (Math.random() * 100 < data.lvls.fCoin * 25) {
@@ -4269,6 +4426,54 @@ function startGame(mode = "normal") {
         }
 
         sFriend += fPower;
+        // ПОИСКОВЫЙ ПЁС — гемы за XP друга
+        const searchDogLvl = prestigeData?.skills?.searchDog || 0;
+
+        if (searchDogLvl > 0) {
+          const searchThreshold = searchDogLvl >= 2 ? 250 : 500;
+
+          while (sFriend >= friendXpForSearchGem + searchThreshold) {
+            sGems += 1;
+            sDogGems += 1;
+            friendXpForSearchGem += searchThreshold;
+
+            const friendDiv = document.getElementById("friend-animation");
+            if (friendDiv && friendDiv.style.display !== "none") {
+              const rect = friendDiv.getBoundingClientRect();
+
+              spawnFloatingText(
+                "+1 💎",
+                rect.left + rect.width / 2 + 30,
+                rect.top - 35,
+                "xp",
+              );
+            }
+          }
+        }
+        // ПЁС МИДАСА — шанс монеты за удар друга
+        const midasDogLvl = prestigeData?.skills?.midasDog || 0;
+
+        if (midasDogLvl > 0) {
+          const midasDogChance = 30;
+          const midasDogCoins = midasDogLvl; // Lv1 = 1, Lv2 = 2
+
+          if (Math.random() * 100 < midasDogChance) {
+            sCoins += midasDogCoins;
+            sDogCoins += midasDogCoins;
+
+            const friendDiv = document.getElementById("friend-animation");
+            if (friendDiv && friendDiv.style.display !== "none") {
+              const rect = friendDiv.getBoundingClientRect();
+
+              spawnFloatingText(
+                "+" + midasDogCoins,
+                rect.left + rect.width / 2 + 40,
+                rect.top - 15,
+                "coin",
+              );
+            }
+          }
+        }
 
         // --- ВИЗУАЛИЗАЦИЯ ---
         const friendDiv = document.getElementById("friend-animation");
@@ -4319,13 +4524,19 @@ function handleKick(event) {
   const ballType = clickedBall?.dataset?.ballType || "normal";
   playSound(sounds.kick, 0.15);
 
-  const equipBonuses = [0, 2, 5, 10];
-  let p = data.lvls.click + (equipBonuses[data.lvls.equip] || 0);
+  let p = getPlayerKickPower();
+
   let isCrit = false;
   let isSuperCrit = false;
 
-  if (Math.random() * 100 < data.lvls.crit * 3) {
-    p *= 3;
+  const prestigeCritChance = (prestigeData?.skills?.playerCritChance || 0) * 2;
+  const critChance = data.lvls.crit * 2 + prestigeCritChance;
+
+  const prestigeCritPower = prestigeData?.skills?.playerCritPower || 0;
+  const critMultiplier = 3 + prestigeCritPower;
+
+  if (Math.random() * 100 < critChance) {
+    p *= critMultiplier;
     isCrit = true;
 
     if (Math.random() * 100 < [0, 25, 50, 75][data.lvls.cCoin]) {
@@ -4637,7 +4848,10 @@ function handleKick(event) {
 
   if (isSpecialBall && data.lvls.specialCrit > 0) {
     const specialCritChances = [0, 5, 10, 15];
-    const specialCritChance = specialCritChances[data.lvls.specialCrit] || 0;
+    const prestigeBonus = (prestigeData.skills.specialCrits || 0) * 5;
+
+    const specialCritChance =
+      (specialCritChances[data.lvls.specialCrit] || 0) + prestigeBonus;
 
     if (Math.random() * 100 < specialCritChance) {
       const oldP = p;
@@ -4777,7 +4991,7 @@ function handleKick(event) {
       setTimeout(() => b.classList.remove("show-bonus"), 500);
     }
   }
-
+  console.log("HIT:", ballType, "POWER:", p);
   sClick += p;
   let totalNow = sClick + sFriend + sFooty;
 
@@ -5111,9 +5325,6 @@ function stopGame() {
 
     if (overlay) overlay.style.display = "flex";
 
-    if (typeof saveGame === "function") {
-      saveGame();
-    }
     updateUI();
 
     return;
@@ -5151,6 +5362,7 @@ function stopGame() {
   setVal("res-coin-tele", Math.floor(sTeleCoins));
   setVal("res-coin-drink", drinkMoney);
   setVal("res-coin-attr", attrMoney);
+  setVal("res-coin-dog", Math.floor(sDogCoins));
 
   setVal("res-gem-crystal", Math.floor(sCrystalGems));
   setVal("res-gem-combo", Math.floor(sComboGems));
@@ -5160,6 +5372,7 @@ function stopGame() {
   setVal("res-gem-piggy", Math.floor(sPiggyGems));
   console.log("STOPGAME sTeleGems =", sTeleGems);
   setVal("res-gem-tele", Math.floor(sTeleGems));
+  setVal("res-gem-dog", Math.floor(sDogGems));
   setVal("res-gem-total", Math.floor(totalMatchGems));
 
   data.xp += totalXP;
@@ -5192,6 +5405,11 @@ function stopGame() {
   if (sRewardCoins > 0) {
     showEl("summary-coin-col", "block");
     showEl("row-res-reward");
+  }
+
+  if (sDogCoins > 0) {
+    showEl("summary-coin-col", "block");
+    showEl("row-res-dog-coin");
   }
 
   if (sGoldCoins > 0) {
@@ -5227,6 +5445,7 @@ function stopGame() {
     if (sCrystalTimeGems > 0) showEl("row-res-gem-time");
     if (sPersonalRewardGems > 0) showEl("row-res-gem-personal");
     if (sTeleGems > 0) showEl("row-res-gem-tele");
+    if (sDogGems > 0) showEl("row-res-gem-dog");
 
     showEl("row-res-total-gem");
   }
@@ -5270,6 +5489,8 @@ function closeSummary() {
     "row-res-tele-xp",
     "row-res-tele-coin",
     "row-res-gem-tele",
+    "row-res-dog-coin",
+    "row-res-gem-dog",
   ];
   idsToHide.forEach((id) => {
     let el = document.getElementById(id);
@@ -5329,26 +5550,55 @@ function getExpectedPeople() {
 
   return Math.round(fans + expectedViewers);
 }
-
 function updateLiveStats() {
+  const prestigeSkills =
+    typeof prestigeData !== "undefined" && prestigeData.skills
+      ? prestigeData.skills
+      : {};
   const coachBonusPerPlayer = (data.lvls.coach || 0) * 2;
   const footyTotal = (data.lvls.footy || 0) * (4 + coachBonusPerPlayer);
+
+  const dogPowerBonuses = [0, 3, 7, 12];
   const friendBase = data.lvls.friend || 0;
   const friendBonus = (data.lvls.friendPower || 0) * 2;
+  const prestigeDogPower = dogPowerBonuses[prestigeSkills.dogPower || 0] || 0;
 
-  const teamVal = friendBase + friendBonus + footyTotal;
-  const eBonuses = [0, 2, 5, 10];
-  const damageVal = data.lvls.click + (eBonuses[data.lvls.equip] || 0);
+  const teamVal = friendBase + friendBonus + prestigeDogPower + footyTotal;
+
+  const damageVal =
+    typeof getPlayerKickPower === "function"
+      ? getPlayerKickPower()
+      : data.lvls.click;
+
+  const prestigeReactionBonus = (prestigeSkills.superReaction || 0) * 0.25;
+
   const ballLifeVal =
-    (0.75 + (data.lvls.reaction || 0) * 0.25).toFixed(2) + "с";
+    (0.75 + (data.lvls.reaction || 0) * 0.25 + prestigeReactionBonus).toFixed(
+      2,
+    ) + "с";
 
-  const critVal = data.lvls.crit * 3 + "%";
-  const delayVal = [0, 0.5, 1, 2][data.lvls.delay] + "%";
   const specialBallLifeVal =
-    (0.75 + (data.lvls.specialReaction || 0) * 0.25).toFixed(2) + "с";
+    (
+      0.75 +
+      (data.lvls.specialReaction || 0) * 0.25 +
+      prestigeReactionBonus
+    ).toFixed(2) + "с";
+
+  const prestigeCritChance = (prestigeSkills.playerCritChance || 0) * 2;
+
+  const critVal = (data.lvls.crit || 0) * 2 + prestigeCritChance + "%";
+
+  const delayVal = [0, 0.5, 1, 2][data.lvls.delay] + "%";
+
+  const prestigeSpecialCrit = (prestigeSkills.specialCrits || 0) * 5;
+
+  const specialCritVal =
+    ([0, 5, 10, 15][data.lvls.specialCrit || 0] || 0) +
+    prestigeSpecialCrit +
+    "%";
+
   const peopleVal = "~" + getExpectedPeople();
   const incomeVal = "~" + getExpectedIncome();
-  const specialCritVal = [0, 5, 10, 15][data.lvls.specialCrit || 0] + "%";
 
   const topBoxLeft = document.getElementById("top-box-left");
   const topBoxMiddle = document.getElementById("top-box-middle");
@@ -5411,12 +5661,14 @@ function updateLiveStats() {
   let showMiddle = false;
 
   if (rowTopCrit) {
-    const show = data.lvls.crit > 0;
+    const show =
+      data.lvls.crit > 0 || (prestigeSkills.playerCritChance || 0) > 0;
     rowTopCrit.style.display = show ? "block" : "none";
     if (show) showMiddle = true;
   }
   if (rowTopSpecialLife) {
-    const show = data.lvls.specialReaction > 0;
+    const show =
+      data.lvls.specialReaction > 0 || (prestigeSkills.superReaction || 0) > 0;
     rowTopSpecialLife.style.display = show ? "block" : "none";
     if (show) showMiddle = true;
   }
@@ -5449,7 +5701,9 @@ function updateLiveStats() {
   if (rowTopIncome) rowTopIncome.style.display = showRight ? "block" : "none";
   if (rowTopSpecialCrit) {
     rowTopSpecialCrit.style.display =
-      data.lvls.specialCrit > 0 ? "block" : "none";
+      data.lvls.specialCrit > 0 || (prestigeSkills.specialCrits || 0) > 0
+        ? "block"
+        : "none";
   }
 }
 initTree();
@@ -5508,9 +5762,6 @@ function initAdminControls() {
       }
 
       updateUI();
-      if (typeof saveGame === "function") {
-        saveGame();
-      }
     });
   }
 
