@@ -469,9 +469,43 @@ body {
   font-size: 1rem;
   color: #cccccc;
 }
-
 .competition-opponent-preview.locked {
-  filter: grayscale(1) brightness(0.4);
+  position: relative;
+  overflow: hidden;
+}
+
+.competition-opponent-preview.locked img {
+  filter: grayscale(1) brightness(0.42);
+}
+
+.competition-opponent-preview.locked .competition-opponent-name,
+.competition-opponent-preview.locked .competition-opponent-desc {
+  opacity: 0.45;
+}
+
+.competition-opponent-preview.locked::after {
+  content: "LOCKED";
+  position: absolute;
+  left: 50%;
+  top: 42%;
+
+  transform: translate(-50%, -50%);
+
+  color: #ff2b2b;
+
+  font-family: inherit;
+  font-size: 3.2rem;
+  font-weight: bold;
+  letter-spacing: 2px;
+
+  text-shadow:
+    2px 2px 0 #5a0000,
+    0 0 8px #ff0000,
+    0 0 18px #ff0000,
+    0 0 30px rgba(255, 0, 0, 0.8);
+
+  z-index: 5;
+  pointer-events: none;
 }
 
 #competition-summary-overlay {
@@ -492,6 +526,70 @@ body {
   padding: 30px;
   text-align: center;
   color: white;
+}
+
+.competition-carousel-wrap {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+}
+
+.competition-carousel-arrow {
+  width: 70px;
+  height: 90px;
+
+  border: 3px solid #ffd700;
+  border-radius: 18px;
+
+  background: rgba(10, 10, 20, 0.85);
+  color: #ffd700;
+
+  font-family: inherit;
+  font-size: 4rem;
+  line-height: 1;
+
+  cursor: pointer;
+
+  text-shadow:
+    0 0 8px #ffae00,
+    0 0 16px #ff6a00;
+
+  box-shadow:
+    0 0 18px rgba(255, 215, 0, 0.4),
+    inset 0 0 18px rgba(255, 215, 0, 0.08);
+
+  transition: 0.2s ease;
+}
+
+.competition-carousel-arrow:hover {
+  transform: scale(1.08);
+  background: rgba(50, 35, 0, 0.85);
+}
+
+.competition-carousel-arrow:active {
+  transform: scale(0.96);
+}
+
+.competition-opponents-list {
+  width: auto;
+  min-width: 1040px;
+}
+
+.competition-opponent-preview.carousel-left,
+.competition-opponent-preview.carousel-right {
+  transform: scale(0.92);
+  opacity: 0.82;
+}
+
+.competition-opponent-preview.carousel-center {
+  transform: scale(1);
+  opacity: 1;
+}
+
+.competition-opponent-preview.carousel-center.selected {
+  transform: translateY(-10px) scale(1.04);
 }
 
 #competition-result-title {
@@ -1233,7 +1331,7 @@ body {
 
 #game-screen.competition-mode .player-container {
   left: 28% !important;
-  top: 71% !important;
+  top: 67% !important;
   transform: translate(-50%, -50%) scale(0.8) !important;
 }
 
@@ -1998,6 +2096,19 @@ body {
   font-weight: bold;
   color: #f5d76e;
   line-height: 1;
+
+  min-width: 58px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.player-card.ovr-big .player-card-ovr {
+  font-size: 1.2rem;
+  letter-spacing: -2px;
+}
+
+.player-card.ovr-big .player-card-flag {
+  margin-top: 4px;
 }
 
 .player-card-flag {
@@ -2293,6 +2404,20 @@ body {
   animation: iconStarPulse 1.8s ease-in-out infinite;
   pointer-events: none;
   z-index: 2;
+}
+
+.card-icon .player-card-header,
+.card-icon .player-stat-row,
+.card-icon .player-stat-row b,
+.card-icon .player-card-ovr,
+.card-legend .player-card-header,
+.card-legend .player-stat-row,
+.card-legend .player-stat-row b,
+.card-legend .player-card-ovr {
+  color: #ffffff;
+  text-shadow:
+    0 0 4px rgba(255, 255, 255, 0.35),
+    1px 1px 0 rgba(0, 0, 0, 0.6);
 }
 
 .player-card.border-icon {

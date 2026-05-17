@@ -2,6 +2,7 @@ let competitionPitbullInterval = null;
 let pitbullAtlasData = null;
 let pitbullFrames = [];
 let pitbullAnimationInterval = null;
+let germanyBerserkCooldown = false;
 
 async function loadPitbullAtlas() {
   try {
@@ -89,77 +90,59 @@ function updatePitbullVisibility() {
   startPitbullAnimation();
 }
 
-const competitionOpponents = [
-  {
-    id: "england",
-    name: "England",
-    bg: "competition/England.png",
-    opponentImage: "competition/opponent_eng.png",
-
-    stats: {
-      speed: 0.2,
-      power: 50,
-      critChance: 0.1,
-      critMult: 5,
-    },
-
-    ability: {
-      id: "energyRush",
-      name: "Energy Rush",
-      chance: 0.03,
-      speedMultiplier: 2,
-      duration: 1000,
-    },
-
-    mechanics: {
-      specialBalls: ["fire"],
-    },
-  },
-  {
-    id: "netherlands",
-    name: "Netherlands",
-    bg: "competition/Netherlands.png",
-    opponentImage: "competition/opponent_ned.png",
-    stats: {
-      speed: 1.0,
-      power: 2,
-      critChance: 0.08,
-      critMult: 2,
-    },
-    mechanics: {
-      specialBalls: ["gold"],
-    },
-  },
-  {
-    id: "brazil",
-    name: "Brazil",
-    bg: "competition/Brazil.png",
-    opponentImage: "competition/opponent_bra.png",
-    stats: {
-      speed: 1.2,
-      power: 2,
-      critChance: 0.12,
-      critMult: 3,
-    },
-    mechanics: {
-      specialBalls: ["fire", "gold", "crystal"],
-    },
-  },
-];
-
 function getSelectedCompetitionOpponent() {
   return (
-    competitionOpponents.find(
-      (o) => o.id === competitionState.selectedOpponentId,
-    ) || competitionOpponents[0]
+    competitionLevels.find(
+      (lvl) => lvl.key === competitionState.selectedOpponentId,
+    ) || competitionLevels[0]
   );
 }
-
 function openCompetitionMenu() {
   const overlay = document.getElementById("competition-menu-overlay");
   if (!overlay) return;
 
-  const selected = data.competition.selected || "england";
+  const selectedKey = data.competition.selected || "spain";
+  const selectedIndex = getCompetitionIndexByKey(selectedKey);
+
+  const visibleOpponents = [
+    {
+      lvl: getLoopedCompetitionLevel(selectedIndex - 1),
+      pos: "left",
+    },
+    {
+      lvl: getLoopedCompetitionLevel(selectedIndex),
+      pos: "center",
+    },
+    {
+      lvl: getLoopedCompetitionLevel(selectedIndex + 1),
+      pos: "right",
+    },
+  ];
+
+  const cardsHTML = visibleOpponents
+    .map(({ lvl, pos }) => {
+      const isUnlocked = data.competition.unlocked[lvl.key];
+      const isSelected = pos === "center";
+
+      return `
+        <div
+          class="competition-opponent-preview carousel-${pos} ${isSelected ? "selected" : ""} ${isUnlocked ? "" : "locked"}"
+          onclick="selectCompetitionOpponent('${lvl.key}', event)"
+        >
+          <img src="${lvl.bg}" />
+
+          <div class="competition-opponent-name">
+            <img class="competition-menu-flag" src="${lvl.flag}" alt="${lvl.country}" />
+            ${lvl.country.toUpperCase()}
+          </div>
+
+          <div class="competition-opponent-desc">
+            ${isUnlocked ? `${lvl.name} • ${lvl.ovr} OVR` : "LOCKED"}
+          </div>
+        </div>
+      `;
+    })
+    .join("");
 
   overlay.innerHTML = `
     <div class="competition-menu-screen">
@@ -171,46 +154,26 @@ function openCompetitionMenu() {
         Выбери соперника
       </div>
 
-      <div class="competition-opponents-list">
-        <div
-          class="competition-opponent-preview ${selected === "england" ? "selected" : ""}"
-          onclick="selectCompetitionOpponent('england', event)"
+      <div class="competition-carousel-wrap">
+        <button
+          type="button"
+          class="competition-carousel-arrow competition-carousel-arrow-left"
+          onclick="changeCompetitionCarousel(-1, event)"
         >
-          <img src="competition/England.png" />
-          <div class="competition-opponent-name">
-  <img class="competition-menu-flag" src="flags/eng.png" alt="England" />
-  ENGLAND
-</div>
-          <div class="competition-opponent-desc">Jimmy • 84 OVR</div>
+          ‹
+        </button>
+
+        <div class="competition-opponents-list">
+          ${cardsHTML}
         </div>
 
-        <div
-          class="competition-opponent-preview ${data.competition.unlocked.netherlands ? "" : "locked"} ${selected === "netherlands" ? "selected" : ""}"
-          onclick="selectCompetitionOpponent('netherlands', event)"
+        <button
+          type="button"
+          class="competition-carousel-arrow competition-carousel-arrow-right"
+          onclick="changeCompetitionCarousel(1, event)"
         >
-          <img src="competition/Netherlands.png" />
-          <div class="competition-opponent-name">
-  <img class="competition-menu-flag" src="flags/nl.png" alt="Netherlands" />
-  NETHERLANDS
-</div>
-          <div class="competition-opponent-desc">
-          ${data.competition.unlocked.netherlands ? "Pitbull • 86 OVR" : "LOCKED"}
-          </div>
-        </div>
-
-        <div
-          class="competition-opponent-preview ${data.competition.unlocked.brazil ? "" : "locked"} ${selected === "brazil" ? "selected" : ""}"
-          onclick="selectCompetitionOpponent('brazil', event)"
-        >
-          <img src="competition/Brazil.png" />
-          <div class="competition-opponent-name">
-  <img class="competition-menu-flag" src="flags/br.png" alt="Brazil" />
-  BRAZIL
-</div>
-          <div class="competition-opponent-desc">
-            ${data.competition.unlocked.brazil ? "Ronny • 95 OVR" : "LOCKED"}
-          </div>
-        </div>
+          ›
+        </button>
       </div>
 
       <button type="button" class="menu-btn" onclick="startSelectedCompetition(event)">
@@ -232,17 +195,9 @@ function selectCompetitionOpponent(key, event) {
     event.stopPropagation();
   }
 
-  if (!data.competition.unlocked[key]) return;
-
   data.competition.selected = key;
 
-  document.querySelectorAll(".competition-opponent-preview").forEach((card) => {
-    card.classList.remove("selected");
-  });
-
-  if (event?.currentTarget) {
-    event.currentTarget.classList.add("selected");
-  }
+  openCompetitionMenu();
 }
 
 function closeCompetitionMenu(event) {
@@ -263,7 +218,7 @@ function startSelectedCompetition(event) {
     event.stopPropagation();
   }
 
-  const selectedKey = data.competition.selected || "england";
+  const selectedKey = data.competition.selected || "spain";
 
   if (!data.competition.unlocked[selectedKey]) return;
 
@@ -294,6 +249,8 @@ function startCompetitionEnemy() {
 
   competitionState.enemyScore = 0;
   competitionState.enemyRushActive = false;
+  competitionState.enemyBerserkActive = false;
+  germanyBerserkCooldown = false;
 
   function enemyHit() {
     let gain = enemy.stats.power;
@@ -315,6 +272,7 @@ function startCompetitionEnemy() {
     }
 
     tryTriggerEnemyAbility(enemy);
+    tryTriggerGermanyBerserk(enemy);
 
     updateCompetitionHud();
   }
@@ -326,6 +284,31 @@ function startCompetitionEnemy() {
   if (enemy.special?.name === "Pitbull Bite") {
     startPitbullAttack(enemy);
   }
+}
+
+function getCompetitionIndexByKey(key) {
+  const index = competitionLevels.findIndex((lvl) => lvl.key === key);
+  return index >= 0 ? index : 0;
+}
+
+function getLoopedCompetitionLevel(index) {
+  const total = competitionLevels.length;
+  return competitionLevels[(index + total) % total];
+}
+
+function changeCompetitionCarousel(step, event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  const currentKey = data.competition.selected || "spain";
+  const currentIndex = getCompetitionIndexByKey(currentKey);
+  const next = getLoopedCompetitionLevel(currentIndex + step);
+
+  data.competition.selected = next.key;
+
+  openCompetitionMenu();
 }
 
 function startPitbullAttack(enemy) {
@@ -371,11 +354,35 @@ function stopPitbullAttack() {
   }
 }
 
+function trySpanishCounterAttack(points, event) {
+  if (currentMode !== "competition") return false;
+  if (data.competition.selected !== "spain") return false;
+
+  const enemy = competitionLevels.find((lvl) => lvl.key === "spain") || null;
+
+  if (!enemy?.special) return false;
+
+  if (Math.random() >= enemy.special.chance) return false;
+
+  competitionState.enemyScore += points;
+
+  spawnFloatingText(
+    "COUNTER +" + Math.floor(points),
+    event.clientX,
+    event.clientY - 40,
+    "drain",
+  );
+
+  updateCompetitionHud();
+
+  return true;
+}
+
 function tryTriggerEnemyAbility(enemy) {
-  const ability = enemy.ability;
+  const ability = enemy.special;
   if (!ability) return;
 
-  if (ability.id !== "energyRush") return;
+  if (ability.name !== "Energy Rush") return;
   if (competitionState.enemyRushActive) return;
 
   if (Math.random() >= ability.chance) return;
@@ -444,9 +451,110 @@ function tryTriggerEnemyAbility(enemy) {
         spawnFloatingText("+" + Math.floor(gain), x, y, isCrit ? "crit" : "xp");
       }
 
+      tryTriggerEnemyAbility(enemy);
+
       updateCompetitionHud();
     }, enemy.stats.speed * 1000);
   }, ability.duration);
+}
+
+function tryTriggerGermanyBerserk(enemy) {
+  const ability = enemy.special;
+  if (!ability) return;
+  if (ability.name !== "Deutsche Maschine") return;
+  if (competitionState.enemyBerserkActive) return;
+  if (germanyBerserkCooldown) return;
+
+  const playerScore = Math.floor(getCompetitionPlayerScore());
+  const enemyScore = Math.floor(competitionState.enemyScore || 0);
+
+  if (playerScore - enemyScore < ability.triggerBehind) return;
+  if (Math.random() >= ability.chance) return;
+
+  competitionState.enemyBerserkActive = true;
+  germanyBerserkCooldown = true;
+
+  const opponentEl = document.getElementById("competition-opponent");
+
+  if (opponentEl) {
+    const rect = opponentEl.getBoundingClientRect();
+
+    spawnFloatingText(
+      "DEUTSCHE<br>MASCHINE!",
+      rect.left + rect.width / 2,
+      rect.top - 10,
+      "ultraSmall",
+    );
+  }
+
+  clearInterval(competitionState.enemyInterval);
+
+  const berserkSpeed = enemy.stats.speed / ability.speedMultiplier;
+
+  competitionState.enemyInterval = setInterval(() => {
+    let gain = enemy.stats.power * ability.powerMultiplier;
+    const isCrit = Math.random() < enemy.stats.critChance;
+
+    if (isCrit) {
+      gain *= enemy.stats.critMult;
+    }
+
+    competitionState.enemyScore += gain;
+
+    const opponentEl = document.getElementById("competition-opponent");
+    if (opponentEl) {
+      const rect = opponentEl.getBoundingClientRect();
+
+      spawnFloatingText(
+        "+" + Math.floor(gain),
+        rect.left + rect.width / 2,
+        rect.top + 20,
+        isCrit ? "crit" : "xp",
+      );
+    }
+
+    updateCompetitionHud();
+  }, berserkSpeed * 1000);
+
+  setTimeout(() => {
+    if (currentMode !== "competition") return;
+
+    competitionState.enemyBerserkActive = false;
+
+    clearInterval(competitionState.enemyInterval);
+
+    competitionState.enemyInterval = setInterval(() => {
+      let gain = enemy.stats.power;
+      const isCrit = Math.random() < enemy.stats.critChance;
+
+      if (isCrit) {
+        gain *= enemy.stats.critMult;
+      }
+
+      competitionState.enemyScore += gain;
+
+      const opponentEl = document.getElementById("competition-opponent");
+      if (opponentEl) {
+        const rect = opponentEl.getBoundingClientRect();
+
+        spawnFloatingText(
+          "+" + Math.floor(gain),
+          rect.left + rect.width / 2,
+          rect.top + 20,
+          isCrit ? "crit" : "xp",
+        );
+      }
+
+      tryTriggerEnemyAbility(enemy);
+      tryTriggerGermanyBerserk(enemy);
+
+      updateCompetitionHud();
+    }, enemy.stats.speed * 1000);
+  }, ability.duration);
+
+  setTimeout(() => {
+    germanyBerserkCooldown = false;
+  }, ability.cooldown);
 }
 
 function stopCompetitionEnemy() {

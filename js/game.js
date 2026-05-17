@@ -14,18 +14,48 @@ const music = {
     new Audio("match/music/menu2.mp3"),
     new Audio("match/music/menu3.mp3"),
   ],
+
   game: new Audio("match/music/game.mp3"),
+
+  competition: {
+    spain: new Audio("match/music/spain.mp3"),
+    england: new Audio("match/music/england.mp3"),
+    germany: new Audio("match/music/germany.mp3"),
+    netherlands: new Audio("match/music/netherlands.mp3"),
+    norway: new Audio("match/music/norway.mp3"),
+    brazil: new Audio("match/music/brazil.mp3"),
+    italy: new Audio("match/music/italy.mp3"),
+  },
 };
 
 const sounds = {
-  kick: new Audio("match/sound/kick.mp3"),
-  gold: new Audio("match/sound/gold.mp3"),
-  fire: new Audio("match/sound/fire.mp3"),
-  combo: new Audio("match/sound/combo.mp3"),
-  crystal: new Audio("match/sound/crystal.mp3"),
-  piggyHit: new Audio("match/sound/piggy_hit.mp3"),
+  kick: [new Audio("match/sound/kick.mp3"), new Audio("match/sound/kick.mp3")],
+
+  gold: [new Audio("match/sound/gold.mp3"), new Audio("match/sound/gold.mp3")],
+
+  fire: [new Audio("match/sound/fire.mp3"), new Audio("match/sound/fire.mp3")],
+
+  combo: [
+    new Audio("match/sound/combo.mp3"),
+    new Audio("match/sound/combo.mp3"),
+  ],
+
+  crystal: [
+    new Audio("match/sound/crystal.mp3"),
+    new Audio("match/sound/crystal.mp3"),
+  ],
+
+  piggyHit: [
+    new Audio("match/sound/piggy_hit.mp3"),
+    new Audio("match/sound/piggy_hit.mp3"),
+  ],
+
+  telekinesis: [
+    new Audio("match/sound/tele.mp3"),
+    new Audio("match/sound/tele.mp3"),
+  ],
+
   piggyBreak: new Audio("match/sound/piggy_break.mp3"),
-  telekinesis: new Audio("match/sound/tele.mp3"),
   shockwave: new Audio("match/sound/shockwave.mp3"),
   freeze: new Audio("match/sound/freeze.mp3"),
 };
@@ -47,6 +77,10 @@ menuPlaylist.forEach((track) => {
 
 music.game.preload = "auto";
 music.game.loop = true;
+Object.values(music.competition).forEach((track) => {
+  track.preload = "auto";
+  track.loop = true;
+});
 
 Object.values(sounds).forEach((sound) => {
   sound.preload = "auto";
@@ -60,6 +94,9 @@ function applyMusicVolume() {
   });
 
   music.game.volume = volume;
+  Object.values(music.competition).forEach((track) => {
+    track.volume = volume;
+  });
 }
 
 function setMusicVolume(value) {
@@ -90,20 +127,40 @@ function setMusicEnabled(enabled) {
 function setSoundEnabled(enabled) {
   audioSettings.soundEnabled = !!enabled;
 }
+const soundPools = new Map();
+
+const soundIndexes = new WeakMap();
 
 function playSound(sound, volume = 0.2, randomPitch = true) {
-  if (!sound || !audioSettings.soundEnabled) return;
+  if (!sound) return;
 
   try {
-    const instance = sound.cloneNode();
+    let audio = sound;
 
-    instance.volume = Math.max(
-      0,
-      Math.min(1, volume * audioSettings.soundVolume),
-    );
+    // Если это массив звуков → чередуем
+    if (Array.isArray(sound)) {
+      let index = soundIndexes.get(sound) || 0;
 
-    instance.playbackRate = randomPitch ? 0.9 + Math.random() * 0.2 : 1;
-    instance.play().catch(() => {});
+      audio = sound[index];
+
+      index++;
+      if (index >= sound.length) index = 0;
+
+      soundIndexes.set(sound, index);
+    }
+
+    audio.pause();
+    audio.currentTime = 0;
+
+    audio.volume = volume;
+
+    if (randomPitch) {
+      audio.playbackRate = 0.9 + Math.random() * 0.2;
+    } else {
+      audio.playbackRate = 1;
+    }
+
+    audio.play();
   } catch (e) {}
 }
 
@@ -115,6 +172,10 @@ function stopAllMusic() {
 
   music.game.pause();
   music.game.currentTime = 0;
+  Object.values(music.competition).forEach((track) => {
+    track.pause();
+    track.currentTime = 0;
+  });
 
   currentMusic = null;
   currentMusicType = null;
@@ -176,6 +237,26 @@ function playMusic(type) {
     applyMusicVolume();
     currentMusic.play().catch(() => {});
   }
+}
+
+function playCompetitionMusic(opponentKey) {
+  if (!audioSettings.musicEnabled) return;
+
+  const track = music.competition[opponentKey] || music.competition.england;
+  if (!track) return;
+
+  if (currentMusicType === "competition" && currentMusic === track) {
+    applyMusicVolume();
+    return;
+  }
+
+  stopAllMusic();
+
+  currentMusicType = "competition";
+  currentMusic = track;
+
+  applyMusicVolume();
+  currentMusic.play().catch(() => {});
 }
 
 function stopMusic() {
@@ -1353,18 +1434,18 @@ let data = {
     currentLevel: 0,
 
     unlocked: {
-      england: true,
-      netherlands: false,
-      brazil: false,
-    },
-
-    firstClear: {
+      spain: true,
       england: false,
+      germany: false,
       netherlands: false,
+      norway: false,
       brazil: false,
+      italy: false,
     },
 
-    selected: "england",
+    firstClear: {},
+
+    selected: "spain",
   },
 
   lvls: {
@@ -2021,10 +2102,16 @@ function calculateOVR() {
 
 function updatePlayerCardOVR() {
   const ovrEl = document.getElementById("card-ovr");
+  const card = document.getElementById("menu-player-card");
   if (!ovrEl) return;
 
   const ovr = calculateOVR();
   ovrEl.innerText = ovr;
+
+  if (card) {
+    card.classList.toggle("ovr-big", ovr >= 100);
+  }
+
   updateCardStyle(ovr);
 }
 
@@ -2506,7 +2593,7 @@ function showCompetitionEnemyCard() {
     cardClass = "card-legend";
   } else if (enemy.ovr >= 100) {
     cardClass = "card-icon";
-  } else if (enemy.ovr >= 95) {
+  } else if (enemy.ovr >= 94) {
     cardClass = "card-diamond";
   } else if (enemy.ovr >= 85) {
     cardClass = "card-platinum";
@@ -3088,13 +3175,43 @@ let competitionState = {
 const competitionLevels = [
   {
     id: 0,
+    key: "spain",
+    country: "Spain",
+    name: "Ricito",
+    ovr: 80,
+    bg: "competition/Spain.png",
+    opponent: "competition/opponent_spa.png",
+    flag: "flags/es.png",
+
+    position: {
+      right: 240,
+      bottom: 120,
+      scale: 0.6,
+    },
+
+    stats: {
+      power: 25,
+      critChance: 0.05,
+      critMult: 4,
+      speed: 0.25,
+    },
+
+    special: {
+      name: "Counter Attack",
+      chance: 0.15,
+    },
+  },
+
+  {
+    id: 1,
     key: "england",
     country: "England",
     name: "Jimmy",
-    ovr: 84,
+    ovr: 82,
     bg: "competition/England.png",
     opponent: "competition/opponent_eng.png",
     flag: "flags/eng.png",
+
     position: {
       right: 260,
       bottom: 100,
@@ -3110,12 +3227,47 @@ const competitionLevels = [
 
     special: {
       name: "Energy Rush",
-      chance: 0.03,
+      chance: 0.05,
+      speedMultiplier: 2,
+      duration: 1000,
     },
   },
 
   {
-    id: 1,
+    id: 2,
+    key: "germany",
+    country: "Germany",
+    name: "Hans",
+    ovr: 84,
+    bg: "competition/Germany.png",
+    opponent: "competition/opponent_ger.png",
+    flag: "flags/de.png",
+
+    position: {
+      right: 240,
+      bottom: 120,
+      scale: 0.78,
+    },
+
+    stats: {
+      power: 50,
+      critChance: 0.05,
+      critMult: 5,
+      speed: 0.25,
+    },
+
+    special: {
+      name: "Deutsche Maschine",
+      chance: 0.2,
+      triggerBehind: 500,
+      duration: 2000,
+      cooldown: 3000,
+      powerMultiplier: 2,
+      speedMultiplier: 2,
+    },
+  },
+  {
+    id: 3,
     key: "netherlands",
     country: "Netherlands",
     name: "Pitbull",
@@ -3123,6 +3275,7 @@ const competitionLevels = [
     bg: "competition/Netherlands.png",
     opponent: "competition/opponent_ned.png",
     flag: "flags/nl.png",
+
     position: {
       right: 210,
       bottom: 120,
@@ -3145,16 +3298,44 @@ const competitionLevels = [
       biteCritMult: 5,
     },
   },
-
   {
-    id: 2,
+    id: 4,
+    key: "norway",
+    country: "Norway",
+    name: "Alfinssen",
+    ovr: 90,
+    bg: "competition/Norway.png",
+    opponent: "competition/opponent_nor.png",
+    flag: "flags/no.png",
+
+    position: {
+      right: 250,
+      bottom: 150,
+      scale: 0.88,
+    },
+
+    stats: {
+      power: 100,
+      critChance: 0.1,
+      critMult: 10,
+      speed: 0.3,
+    },
+
+    special: {
+      name: "—",
+      chance: 0,
+    },
+  },
+  {
+    id: 5,
     key: "brazil",
     country: "Brazil",
     name: "Ronny",
-    ovr: 95,
+    ovr: 94,
     bg: "competition/Brazil.png",
     opponent: "competition/opponent_bra.png",
     flag: "flags/br.png",
+
     position: {
       right: 250,
       bottom: 150,
@@ -3170,6 +3351,34 @@ const competitionLevels = [
 
     special: {
       name: "—",
+      chance: 0,
+    },
+  },
+  {
+    id: 6,
+    key: "italy",
+    country: "Italy",
+    name: "Difensoni",
+    ovr: 96,
+    bg: "competition/Italy.png",
+    opponent: "competition/opponent_ita.png",
+    flag: "flags/it.png",
+
+    position: {
+      right: 250,
+      bottom: 150,
+      scale: 0.82,
+    },
+
+    stats: {
+      power: 20,
+      critChance: 0.05,
+      critMult: 100,
+      speed: 0.15,
+    },
+
+    special: {
+      name: "block",
       chance: 0,
     },
   },
@@ -3533,7 +3742,7 @@ function applyTelekinesis(sourceElement, sourceEvent) {
   const targetPos = getElementCenter(target);
   if (!targetPos) return;
 
-  playSound(sounds.telekinesis, 0.2, false);
+  playSound(sounds.telekinesis, 0.15, false);
   playTelekinesisImpact(target);
 
   let p = getPlayerKickPower();
@@ -3752,7 +3961,7 @@ function applyTelekinesis(sourceElement, sourceEvent) {
 }
 
 function playShockwaveRing(x, y) {
-  playSound(sounds.shockwave, 0.4, false);
+  playSound(sounds.shockwave, 0.3, false);
   const ring = document.getElementById("shockwave-ring");
   const field = document.getElementById("game-screen");
   if (!ring || !field) return;
@@ -4143,7 +4352,15 @@ document.addEventListener("mousemove", (e) => {
 // =================================
 
 function startGame(mode = "normal") {
-  playMusic("game");
+  currentMode = mode;
+
+  if (mode === "competition") {
+    playCompetitionMusic(data.competition.selected || "spain");
+  } else {
+    playMusic("game");
+  }
+
+  competitionState.enemyScore = 0;
 
   currentMode = mode;
   competitionState.enemyScore = 0;
@@ -4395,9 +4612,6 @@ function startGame(mode = "normal") {
 
       if (friendTickCounter >= neededTicks) {
         const dogPowerBonuses = [0, 3, 7, 12];
-        const dogCritChanceBonus =
-          (prestigeData?.skills?.dogCritChance || 0) * 5;
-        const dogCritPowerBonus = prestigeData?.skills?.dogCritPower || 0;
 
         let fPower =
           data.lvls.friend +
@@ -4408,13 +4622,24 @@ function startGame(mode = "normal") {
         let gotCoin = false;
         let coinAmt = 1;
 
-        const friendCritChance =
-          (data.lvls.fCrit || 0) * 5 + dogCritChanceBonus;
+        const hasFriendCritSkill = (data.lvls.fCrit || 0) > 0;
+
+        const dogCritChanceBonus = hasFriendCritSkill
+          ? (prestigeData?.skills?.dogCritChance || 0) * 5
+          : 0;
+
+        const dogCritPowerBonus = hasFriendCritSkill
+          ? prestigeData?.skills?.dogCritPower || 0
+          : 0;
+
+        const friendCritChance = hasFriendCritSkill
+          ? (data.lvls.fCrit || 0) * 5 + dogCritChanceBonus
+          : 0;
 
         const friendCritMultiplier = 3 + dogCritPowerBonus;
 
         // ПРОВЕРКА КРИТА ДРУГА
-        if (Math.random() * 100 < friendCritChance) {
+        if (friendCritChance > 0 && Math.random() * 100 < friendCritChance) {
           fPower *= friendCritMultiplier;
           isFriendCrit = true;
 
@@ -4454,7 +4679,7 @@ function startGame(mode = "normal") {
         const midasDogLvl = prestigeData?.skills?.midasDog || 0;
 
         if (midasDogLvl > 0) {
-          const midasDogChance = 30;
+          const midasDogChance = 50;
           const midasDogCoins = midasDogLvl; // Lv1 = 1, Lv2 = 2
 
           if (Math.random() * 100 < midasDogChance) {
@@ -4522,20 +4747,39 @@ function handleKick(event) {
 
   const clickedBall = event.currentTarget;
   const ballType = clickedBall?.dataset?.ballType || "normal";
-  playSound(sounds.kick, 0.15);
+
+  const isSpecialBall =
+    ballType === "gold" ||
+    ballType === "fire" ||
+    ballType === "crystal" ||
+    ballType === "combo";
+
+  if (!isSpecialBall) {
+    playSound(sounds.kick, 0.15);
+  }
 
   let p = getPlayerKickPower();
 
   let isCrit = false;
   let isSuperCrit = false;
 
-  const prestigeCritChance = (prestigeData?.skills?.playerCritChance || 0) * 2;
-  const critChance = data.lvls.crit * 2 + prestigeCritChance;
+  const hasCritSkill = (data.lvls.crit || 0) > 0;
 
-  const prestigeCritPower = prestigeData?.skills?.playerCritPower || 0;
+  const prestigeCritChance = hasCritSkill
+    ? (prestigeData?.skills?.playerCritChance || 0) * 2
+    : 0;
+
+  const critChance = hasCritSkill
+    ? (data.lvls.crit || 0) * 2 + prestigeCritChance
+    : 0;
+
+  const prestigeCritPower = hasCritSkill
+    ? prestigeData?.skills?.playerCritPower || 0
+    : 0;
+
   const critMultiplier = 3 + prestigeCritPower;
 
-  if (Math.random() * 100 < critChance) {
+  if (critChance > 0 && Math.random() * 100 < critChance) {
     p *= critMultiplier;
     isCrit = true;
 
@@ -4557,7 +4801,7 @@ function handleKick(event) {
     piggyState.hp -= p;
 
     if (piggyState.hp <= 0) {
-      playSound(sounds.piggyBreak, 0.35, false);
+      playSound(sounds.piggyBreak, 0.3, false);
       const shockwavePos = getElementCenter(clickedBall);
 
       sCoins += piggyState.reward;
@@ -4636,7 +4880,7 @@ function handleKick(event) {
 
     if (hp <= 0) {
       const shockwavePos = getElementCenter(clickedBall);
-      playSound(sounds.piggyBreak, 0.35, false);
+      playSound(sounds.piggyBreak, 0.3, false);
       sCoins += reward;
       sPiggyCoins += reward;
 
@@ -4692,7 +4936,7 @@ function handleKick(event) {
     surprisePiggyState.hp -= p;
 
     if (surprisePiggyState.hp <= 0) {
-      playSound(sounds.piggyBreak, 0.4, false);
+      playSound(sounds.piggyBreak, 0.3, false);
       const shockwavePos = getElementCenter(clickedBall);
       sCoins += surprisePiggyState.coinReward;
       sGems += surprisePiggyState.gemReward;
@@ -4784,7 +5028,7 @@ function handleKick(event) {
 
     if (hp <= 0) {
       const shockwavePos = getElementCenter(clickedBall);
-      playSound(sounds.piggyBreak, 0.4, false);
+      playSound(sounds.piggyBreak, 0.3, false);
       sCoins += coinReward;
       sGems += gemReward;
       sPiggyCoins += coinReward;
@@ -4838,12 +5082,6 @@ function handleKick(event) {
     return;
   }
 
-  const isSpecialBall =
-    ballType === "gold" ||
-    ballType === "fire" ||
-    ballType === "crystal" ||
-    ballType === "combo";
-
   let isSpecialCrit = false;
 
   if (isSpecialBall && data.lvls.specialCrit > 0) {
@@ -4882,7 +5120,7 @@ function handleKick(event) {
   }
 
   if (ballType === "fire") {
-    playSound(sounds.fire, 0.25);
+    playSound(sounds.fire, 0.2);
     const oldP = p;
     p *= 3;
     const bonusXP = p - oldP;
@@ -4895,7 +5133,7 @@ function handleKick(event) {
   }
 
   if (ballType === "combo") {
-    playSound(sounds.combo, 0.3);
+    playSound(sounds.combo, 0.25);
     const oldP = p;
     p *= 3;
     const bonusXP = p - oldP;
@@ -4932,7 +5170,7 @@ function handleKick(event) {
   }
 
   if (ballType === "crystal") {
-    playSound(sounds.crystal, 0.3);
+    playSound(sounds.crystal, 0.25);
     let amount = isSpecialCrit ? 3 : 1;
 
     sGems += amount;
@@ -4992,7 +5230,16 @@ function handleKick(event) {
     }
   }
   console.log("HIT:", ballType, "POWER:", p);
-  sClick += p;
+
+  if (
+    typeof trySpanishCounterAttack === "function" &&
+    trySpanishCounterAttack(p, event)
+  ) {
+    // контратака — очки ушли сопернику
+  } else {
+    sClick += p;
+  }
+
   let totalNow = sClick + sFriend + sFooty;
 
   if (totalNow < 0) totalNow = 0;
@@ -5243,12 +5490,16 @@ function stopGame() {
     let clearBonusCoins = 0;
     let clearBonusGems = 0;
 
-    const selectedOpponent = data.competition.selected || "england";
+    const selectedOpponent = data.competition.selected || "spain";
 
     const firstClearBonuses = {
-      england: { coins: 1000, gems: 100 },
-      netherlands: { coins: 1500, gems: 150 },
+      spain: { coins: 600, gems: 60 },
+      england: { coins: 800, gems: 80 },
+      germany: { coins: 1000, gems: 100 },
+      netherlands: { coins: 1200, gems: 120 },
+      norway: { coins: 1500, gems: 150 },
       brazil: { coins: 2000, gems: 200 },
+      italy: { coins: 2500, gems: 250 },
     };
 
     if (
@@ -5307,12 +5558,27 @@ function stopGame() {
 
         const selected = data.competition.selected;
 
+        if (selected === "spain") {
+          data.competition.unlocked.england = true;
+        }
+
         if (selected === "england") {
+          data.competition.unlocked.germany = true;
+        }
+
+        if (selected === "germany") {
           data.competition.unlocked.netherlands = true;
         }
 
         if (selected === "netherlands") {
+          data.competition.unlocked.norway = true;
+        }
+        if (selected === "norway") {
           data.competition.unlocked.brazil = true;
+        }
+
+        if (selected === "brazil") {
+          data.competition.unlocked.italy = true;
         }
       } else if (playerScore < enemyScore) {
         title.innerText = "❌ ПОРАЖЕНИЕ";
@@ -5667,9 +5933,10 @@ function updateLiveStats() {
     if (show) showMiddle = true;
   }
   if (rowTopSpecialLife) {
-    const show =
-      data.lvls.specialReaction > 0 || (prestigeSkills.superReaction || 0) > 0;
+    const show = data.lvls.specialReaction > 0;
+
     rowTopSpecialLife.style.display = show ? "block" : "none";
+
     if (show) showMiddle = true;
   }
 
@@ -5756,9 +6023,13 @@ function initAdminControls() {
       data.gems = 9999999;
 
       if (data.competition?.unlocked) {
+        data.competition.unlocked.spain = true;
         data.competition.unlocked.england = true;
+        data.competition.unlocked.germany = true;
         data.competition.unlocked.netherlands = true;
-        data.competition.unlocked.brazil = true;
+        data.competition.unlocked.norway = false;
+        data.competition.unlocked.brazil = false;
+        data.competition.unlocked.italy = false;
       }
 
       updateUI();

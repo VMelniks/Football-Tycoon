@@ -97,7 +97,7 @@ const prestigeSkills = [
   {
     k: "midasDog",
     name: "ПЁС МИДАСА",
-    desc: "30% шанс получить 1, 2🟡 при ударе друга",
+    desc: "50% шанс получить 1, 2🟡 при ударе друга",
     group: "advanced",
     max: 2,
   },
@@ -310,16 +310,24 @@ function createFreshDataAfterPrestige(keepGems) {
     competition: {
       currentLevel: 0,
       unlocked: {
-        england: true,
+        spain: true,
+        england: false,
+        germany: false,
         netherlands: false,
+        norway: false,
         brazil: false,
+        italy: false,
       },
       firstClear: {
+        spain: false,
         england: false,
+        germany: false,
         netherlands: false,
+        norway: false,
         brazil: false,
+        italy: false,
       },
-      selected: "england",
+      selected: "spain",
     },
 
     lvls: {
