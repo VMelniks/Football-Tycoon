@@ -1301,6 +1301,46 @@ body {
   transform: translateY(3px);
   box-shadow: 0 2px 0 #27ae60;
 }
+
+#ice-prison-overlay {
+  position: absolute;
+
+  left: 225px;
+  bottom: 95px;
+
+  width: 220px;
+  height: 260px;
+
+  background-image: url("../competition/ice.png");
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+
+  opacity: 0.58;
+
+  display: none;
+  z-index: 120;
+
+  cursor: pointer;
+  pointer-events: auto;
+
+  image-rendering: pixelated;
+
+  animation: icePrisonPulse 0.8s ease-in-out infinite alternate;
+}
+
+@keyframes icePrisonPulse {
+  from {
+    transform: scale(1);
+    filter: drop-shadow(0 0 8px rgba(120, 220, 255, 0.6));
+  }
+
+  to {
+    transform: scale(1.04);
+    filter: drop-shadow(0 0 18px rgba(180, 245, 255, 0.95));
+  }
+}
+
 /* Анимация зрителя */
 #viewers-container {
   position: absolute;

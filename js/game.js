@@ -3232,13 +3232,44 @@ const competitionLevels = [
       duration: 1000,
     },
   },
-
   {
     id: 2,
+    key: "netherlands",
+    country: "Netherlands",
+    name: "Pitbull",
+    ovr: 84,
+    bg: "competition/Netherlands.png",
+    opponent: "competition/opponent_ned.png",
+    flag: "flags/nl.png",
+
+    position: {
+      right: 210,
+      bottom: 120,
+      scale: 0.7,
+    },
+
+    stats: {
+      power: 30,
+      critChance: 0.01,
+      critMult: 10,
+      speed: 0.2,
+    },
+
+    special: {
+      name: "Pitbull Bite",
+      chance: 1,
+      bitePower: 200,
+      biteSpeed: 0.75,
+      biteCritChance: 0.01,
+      biteCritMult: 5,
+    },
+  },
+  {
+    id: 3,
     key: "germany",
     country: "Germany",
     name: "Hans",
-    ovr: 84,
+    ovr: 86,
     bg: "competition/Germany.png",
     opponent: "competition/opponent_ger.png",
     flag: "flags/de.png",
@@ -3267,38 +3298,6 @@ const competitionLevels = [
     },
   },
   {
-    id: 3,
-    key: "netherlands",
-    country: "Netherlands",
-    name: "Pitbull",
-    ovr: 86,
-    bg: "competition/Netherlands.png",
-    opponent: "competition/opponent_ned.png",
-    flag: "flags/nl.png",
-
-    position: {
-      right: 210,
-      bottom: 120,
-      scale: 0.7,
-    },
-
-    stats: {
-      power: 30,
-      critChance: 0.01,
-      critMult: 10,
-      speed: 0.2,
-    },
-
-    special: {
-      name: "Pitbull Bite",
-      chance: 1,
-      bitePower: 200,
-      biteSpeed: 0.75,
-      biteCritChance: 0.01,
-      biteCritMult: 5,
-    },
-  },
-  {
     id: 4,
     key: "norway",
     country: "Norway",
@@ -3322,8 +3321,10 @@ const competitionLevels = [
     },
 
     special: {
-      name: "—",
-      chance: 0,
+      name: "Ice Prison",
+      chance: 0.07,
+      clicksNeeded: 10,
+      checkInterval: 1000,
     },
   },
   {
@@ -3378,8 +3379,8 @@ const competitionLevels = [
     },
 
     special: {
-      name: "block",
-      chance: 0,
+      name: "Italian Wall",
+      chance: 0.8,
     },
   },
 ];
@@ -4738,6 +4739,10 @@ function startGame(mode = "normal") {
 // =================================
 
 function handleKick(event) {
+  if (icePrisonActive) {
+    spawnFloatingText("FROZEN!", event.clientX, event.clientY - 30, "freeze");
+    return;
+  }
   let ball = event.currentTarget;
 
   if (ball) {
@@ -5231,11 +5236,13 @@ function handleKick(event) {
   }
   console.log("HIT:", ballType, "POWER:", p);
 
-  if (
+  if (typeof tryItalianBlock === "function" && tryItalianBlock(p, event)) {
+    // удар заблокирован
+  } else if (
     typeof trySpanishCounterAttack === "function" &&
     trySpanishCounterAttack(p, event)
   ) {
-    // контратака — очки ушли сопернику
+    // контратака
   } else {
     sClick += p;
   }
@@ -5563,14 +5570,14 @@ function stopGame() {
         }
 
         if (selected === "england") {
-          data.competition.unlocked.germany = true;
-        }
-
-        if (selected === "germany") {
           data.competition.unlocked.netherlands = true;
         }
 
         if (selected === "netherlands") {
+          data.competition.unlocked.germany = true;
+        }
+
+        if (selected === "germany") {
           data.competition.unlocked.norway = true;
         }
         if (selected === "norway") {
@@ -6027,7 +6034,7 @@ function initAdminControls() {
         data.competition.unlocked.england = true;
         data.competition.unlocked.germany = true;
         data.competition.unlocked.netherlands = true;
-        data.competition.unlocked.norway = false;
+        data.competition.unlocked.norway = true;
         data.competition.unlocked.brazil = false;
         data.competition.unlocked.italy = false;
       }

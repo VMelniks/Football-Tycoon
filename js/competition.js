@@ -1,3 +1,11 @@
+let enemyAbilityTimeout = null;
+let germanyBerserkTimeout = null;
+let germanyBerserkCooldownTimeout = null;
+let icePrisonActive = false;
+let icePrisonClicks = 0;
+let icePrisonClicksNeeded = 10;
+let icePrisonInterval = null;
+let icePrisonTimeout = null;
 let competitionPitbullInterval = null;
 let pitbullAtlasData = null;
 let pitbullFrames = [];
@@ -284,6 +292,9 @@ function startCompetitionEnemy() {
   if (enemy.special?.name === "Pitbull Bite") {
     startPitbullAttack(enemy);
   }
+  if (enemy.special?.name === "Ice Prison") {
+    startIcePrisonCheck(enemy);
+  }
 }
 
 function getCompetitionIndexByKey(key) {
@@ -309,6 +320,115 @@ function changeCompetitionCarousel(step, event) {
   data.competition.selected = next.key;
 
   openCompetitionMenu();
+}
+
+function startIcePrisonCheck(enemy) {
+  stopIcePrisonCheck();
+
+  if (!enemy?.special) return;
+  if (enemy.special.name !== "Ice Prison") return;
+
+  const checkInterval = enemy.special.checkInterval || 1000;
+
+  icePrisonInterval = setInterval(() => {
+    if (currentMode !== "competition") return;
+    if (data.competition.selected !== "norway") return;
+    if (icePrisonActive) return;
+
+    if (Math.random() >= enemy.special.chance) return;
+
+    activateIcePrison(enemy);
+  }, checkInterval);
+}
+
+function stopIcePrisonCheck() {
+  if (icePrisonInterval) {
+    clearInterval(icePrisonInterval);
+    icePrisonInterval = null;
+  }
+
+  if (icePrisonTimeout) {
+    clearTimeout(icePrisonTimeout);
+    icePrisonTimeout = null;
+  }
+
+  icePrisonActive = false;
+  icePrisonClicks = 0;
+
+  const ice = document.getElementById("ice-prison-overlay");
+  if (ice) {
+    ice.style.display = "none";
+  }
+}
+
+function activateIcePrison(enemy) {
+  icePrisonActive = true;
+  icePrisonClicks = 0;
+  icePrisonClicksNeeded = enemy.special.clicksNeeded || 10;
+
+  const ice = document.getElementById("ice-prison-overlay");
+
+  if (ice) {
+    ice.style.display = "block";
+    ice.onclick = hitIcePrison;
+  }
+
+  spawnFloatingText(
+    "ICE<br>PRISON!",
+    window.innerWidth * 0.28,
+    window.innerHeight * 0.42,
+    "ultraSmall",
+  );
+}
+
+function hitIcePrison(event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  if (!icePrisonActive) return;
+
+  icePrisonClicks++;
+
+  const ice = document.getElementById("ice-prison-overlay");
+
+  if (ice) {
+    ice.style.transform = "scale(0.96)";
+
+    setTimeout(() => {
+      ice.style.transform = "";
+    }, 80);
+  }
+
+  spawnFloatingText(
+    "-" + icePrisonClicks + "/" + icePrisonClicksNeeded,
+    event?.clientX || window.innerWidth * 0.3,
+    event?.clientY || window.innerHeight * 0.5,
+    "freeze",
+  );
+
+  if (icePrisonClicks >= icePrisonClicksNeeded) {
+    breakIcePrison();
+  }
+}
+
+function breakIcePrison() {
+  icePrisonActive = false;
+  icePrisonClicks = 0;
+
+  const ice = document.getElementById("ice-prison-overlay");
+
+  if (ice) {
+    ice.style.display = "none";
+  }
+
+  spawnFloatingText(
+    "ICE BROKEN!",
+    window.innerWidth * 0.28,
+    window.innerHeight * 0.42,
+    "freeze",
+  );
 }
 
 function startPitbullAttack(enemy) {
@@ -364,16 +484,33 @@ function trySpanishCounterAttack(points, event) {
 
   if (Math.random() >= enemy.special.chance) return false;
 
-  competitionState.enemyScore += points;
+  const counterPower = points * 2;
+
+  competitionState.enemyScore += counterPower;
 
   spawnFloatingText(
-    "COUNTER +" + Math.floor(points),
+    "COUNTER +" + Math.floor(counterPower),
     event.clientX,
     event.clientY - 40,
     "drain",
   );
 
   updateCompetitionHud();
+
+  return true;
+}
+
+function tryItalianBlock(points, event) {
+  if (currentMode !== "competition") return false;
+  if (data.competition.selected !== "italy") return false;
+
+  const enemy = competitionLevels.find((lvl) => lvl.key === "italy") || null;
+
+  if (!enemy?.special) return false;
+
+  if (Math.random() >= enemy.special.chance) return false;
+
+  spawnFloatingText("BLOCK!", event.clientX, event.clientY - 40, "freeze");
 
   return true;
 }
@@ -425,7 +562,7 @@ function tryTriggerEnemyAbility(enemy) {
     updateCompetitionHud();
   }, rushSpeed * 1000);
 
-  setTimeout(() => {
+  enemyAbilityTimeout = setTimeout(() => {
     if (currentMode !== "competition") return;
 
     competitionState.enemyRushActive = false;
@@ -516,7 +653,7 @@ function tryTriggerGermanyBerserk(enemy) {
     updateCompetitionHud();
   }, berserkSpeed * 1000);
 
-  setTimeout(() => {
+  germanyBerserkTimeout = setTimeout(() => {
     if (currentMode !== "competition") return;
 
     competitionState.enemyBerserkActive = false;
@@ -552,7 +689,7 @@ function tryTriggerGermanyBerserk(enemy) {
     }, enemy.stats.speed * 1000);
   }, ability.duration);
 
-  setTimeout(() => {
+  germanyBerserkCooldownTimeout = setTimeout(() => {
     germanyBerserkCooldown = false;
   }, ability.cooldown);
 }
@@ -562,8 +699,20 @@ function stopCompetitionEnemy() {
     clearInterval(competitionState.enemyInterval);
     competitionState.enemyInterval = null;
   }
+
+  competitionState.enemyRushActive = false;
+  competitionState.enemyBerserkActive = false;
+
+  if (typeof germanyBerserkCooldown !== "undefined") {
+    germanyBerserkCooldown = false;
+  }
+  clearTimeout(enemyAbilityTimeout);
+  clearTimeout(germanyBerserkTimeout);
+  clearTimeout(germanyBerserkCooldownTimeout);
+
+  enemyAbilityTimeout = null;
+  germanyBerserkTimeout = null;
+  germanyBerserkCooldownTimeout = null;
   stopPitbullAttack();
+  stopIcePrisonCheck();
 }
-document.addEventListener("DOMContentLoaded", () => {
-  loadPitbullAtlas();
-});
