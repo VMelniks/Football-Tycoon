@@ -13,6 +13,7 @@ const music = {
     new Audio("match/music/menu1.mp3"),
     new Audio("match/music/menu2.mp3"),
     new Audio("match/music/menu3.mp3"),
+    new Audio("match/music/menu4.mp3"),
   ],
 
   game: new Audio("match/music/game.mp3"),
@@ -22,9 +23,11 @@ const music = {
     england: new Audio("match/music/england.mp3"),
     germany: new Audio("match/music/germany.mp3"),
     netherlands: new Audio("match/music/netherlands.mp3"),
+    cameroon: new Audio("match/music/cameroon.mp3"),
     norway: new Audio("match/music/norway.mp3"),
     brazil: new Audio("match/music/brazil.mp3"),
     italy: new Audio("match/music/italy.mp3"),
+    france: new Audio("match/music/france.mp3"),
   },
 };
 
@@ -58,6 +61,11 @@ const sounds = {
   piggyBreak: new Audio("match/sound/piggy_break.mp3"),
   shockwave: new Audio("match/sound/shockwave.mp3"),
   freeze: new Audio("match/sound/freeze.mp3"),
+  roar: new Audio("match/sound/roar.mp3"),
+  claw: new Audio("match/sound/claw.mp3"),
+  icePrison: new Audio("match/sound/ice_prison.mp3"),
+  iceHit: new Audio("match/sound/ice_hit.mp3"),
+  iceBreak: new Audio("match/sound/ice_break.mp3"),
 };
 
 const menuPlaylist = music.menu;
@@ -190,6 +198,10 @@ function playMenuTrack(index) {
   currentMenuTrackIndex = index;
   currentMusicType = "menu";
   currentMusic = menuPlaylist[currentMenuTrackIndex];
+  currentMusic.volume = audioSettings.musicEnabled
+    ? audioSettings.musicVolume
+    : 0;
+  currentMusic.muted = false;
 
   applyMusicVolume();
   currentMusic.play().catch(() => {});
@@ -233,10 +245,55 @@ function playMusic(type) {
 
     currentMusicType = "game";
     currentMusic = music.game;
+    currentMusic.volume = audioSettings.musicEnabled
+      ? audioSettings.musicVolume
+      : 0;
+    currentMusic.muted = false;
 
     applyMusicVolume();
     currentMusic.play().catch(() => {});
   }
+}
+
+function unlockAudio() {
+  if (audioUnlocked) return Promise.resolve();
+
+  const silentSounds = [];
+
+  menuPlaylist.forEach((track) => {
+    track.muted = true;
+    track.currentTime = 0;
+    silentSounds.push(
+      track
+        .play()
+        .then(() => {
+          track.pause();
+          track.currentTime = 0;
+          track.muted = false;
+        })
+        .catch(() => {
+          track.muted = false;
+        }),
+    );
+  });
+
+  music.game.muted = true;
+  music.game.currentTime = 0;
+  silentSounds.push(
+    music.game
+      .play()
+      .then(() => {
+        music.game.pause();
+        music.game.currentTime = 0;
+        music.game.muted = false;
+      })
+      .catch(() => {
+        music.game.muted = false;
+      }),
+  );
+
+  audioUnlocked = true;
+  return Promise.allSettled(silentSounds);
 }
 
 function playCompetitionMusic(opponentKey) {
@@ -254,6 +311,10 @@ function playCompetitionMusic(opponentKey) {
 
   currentMusicType = "competition";
   currentMusic = track;
+  currentMusic.volume = audioSettings.musicEnabled
+    ? audioSettings.musicVolume
+    : 0;
+  currentMusic.muted = false;
 
   applyMusicVolume();
   currentMusic.play().catch(() => {});
@@ -484,10 +545,17 @@ function rollBallType() {
   if (currentMode === "competition") {
     return "normal";
   }
-  const comboChance = [0, 0.5, 1, 1.5][data.lvls.synergy || 0] || 0;
-  const fireChance = [0, 3, 6, 9][data.lvls.fireBall || 0] || 0;
-  const goldChance = [0, 2, 4, 6][data.lvls.goldBall || 0] || 0;
-  const crystalChance = [0, 1, 2, 3][data.lvls.crystalBall || 0] || 0;
+  let comboChance = [0, 0.5, 1, 1.5][data.lvls.synergy || 0] || 0;
+  let fireChance = [0, 3, 6, 9][data.lvls.fireBall || 0] || 0;
+  let goldChance = [0, 2, 4, 6][data.lvls.goldBall || 0] || 0;
+  let crystalChance = [0, 1, 2, 3][data.lvls.crystalBall || 0] || 0;
+
+  if (isNightMatch()) {
+    comboChance *= 2;
+    crystalChance *= 2;
+    fireChance *= 2;
+    goldChance *= 2;
+  }
 
   if (data.lvls.synergy > 0 && Math.random() * 100 < comboChance) {
     return "combo";
@@ -555,10 +623,68 @@ function createExtraBall() {
   return ball;
 }
 
-function getExtraBallLifeTime() {
-  const prestigeBonus = (prestigeData.skills.superReaction || 0) * 250;
+function isNightMatch() {
+  return currentMode === "normal" && currentNormalFieldType === "night";
+}
+function isClosedNightMatch() {
+  return isNightMatch();
+}
 
-  return 750 + (data.lvls.specialReaction || 0) * 250 + prestigeBonus;
+function isRainMatch() {
+  return currentMode === "normal" && currentNormalFieldType === "rain";
+}
+
+function rollRainMiss() {
+  return isRainMatch() && Math.random() * 100 < 15;
+}
+
+function rollPlayerMiss() {
+  let missChance = 0;
+
+  if (isRainMatch()) {
+    missChance += 15;
+  }
+
+  if (typeof isCameroonRoarActive === "function" && isCameroonRoarActive()) {
+    missChance += getCameroonRoarMissChance();
+  }
+
+  return missChance > 0 && Math.random() * 100 < missChance;
+}
+
+function isSnowMatch() {
+  return currentMode === "normal" && currentNormalFieldType === "snow";
+}
+
+function getExtraBallLifeTime() {
+  const prestigeSkills =
+    typeof prestigeData !== "undefined" && prestigeData.skills
+      ? prestigeData.skills
+      : {};
+
+  const baseTime = currentMode === "competition" ? 500 : 750;
+
+  const specialReactionBonus = (data.lvls.specialReaction || 0) * 250;
+  const prestigeBonus = (prestigeSkills.superReaction || 0) * 250;
+  const snowBonus = isSnowMatch() ? 500 : 0;
+
+  return baseTime + specialReactionBonus + prestigeBonus + snowBonus;
+}
+function applySnowFreezeVisual(target) {
+  if (!target) return;
+
+  playSound(sounds.freeze, 0.12, false);
+
+  const pos = getElementCenter(target);
+  if (pos) {
+    spawnFloatingText("❄️", pos.x, pos.y - 25, "freeze");
+  }
+
+  target.classList.add("freeze-effect");
+
+  setTimeout(() => {
+    target.classList.remove("freeze-effect");
+  }, 200);
 }
 
 function updateMultiBalls() {
@@ -580,6 +706,7 @@ function updateMultiBalls() {
 
   moveAllBallsToRandomPositions();
 }
+
 function moveAllBallsToRandomPositions() {
   const usedIndexes = [];
 
@@ -622,9 +749,18 @@ function updateExtraBallLife() {
 }
 
 function getMainBallLifeTime() {
-  const prestigeBonus = (prestigeData.skills.superReaction || 0) * 250;
+  const prestigeSkills =
+    typeof prestigeData !== "undefined" && prestigeData.skills
+      ? prestigeData.skills
+      : {};
 
-  return 750 + (data.lvls.reaction || 0) * 250 + prestigeBonus;
+  const baseTime = currentMode === "competition" ? 500 : 750;
+
+  const reactionBonus = (data.lvls.reaction || 0) * 250;
+  const prestigeBonus = (prestigeSkills.superReaction || 0) * 250;
+  const snowBonus = isSnowMatch() ? 500 : 0;
+
+  return baseTime + reactionBonus + prestigeBonus + snowBonus;
 }
 
 function scheduleMainBallMove(delay = null) {
@@ -637,12 +773,21 @@ function scheduleMainBallMove(delay = null) {
 
   mainBallMoveTimeout = setTimeout(() => {
     moveAllBallsToRandomPositions();
+
+    if (isSnowMatch()) {
+      applySnowFreezeVisual(document.getElementById("ball"));
+    }
+
     scheduleMainBallMove(getMainBallLifeTime());
   }, time);
 }
 
 function trySpawnExtraBall() {
-  const spawnChance = 0.1; // всегда 10%
+  let spawnChance = 0.1;
+
+  if (isNightMatch()) {
+    spawnChance *= 2;
+  }
 
   // Ищем первый скрытый доп. мяч
   const hiddenBallIndex = extraBalls.findIndex(
@@ -685,6 +830,21 @@ function trySpawnExtraBall() {
   ball.dataset.lifeTime = getExtraBallLifeTime().toString();
 
   applyBallType(ball, ballType);
+
+  if (isSnowMatch()) {
+    playSound(sounds.freeze, 0.12, false);
+
+    const pos = getElementCenter(ball);
+    if (pos) {
+      spawnFloatingText("❄️", pos.x, pos.y - 25, "freeze");
+    }
+
+    ball.classList.add("freeze-effect");
+
+    setTimeout(() => {
+      ball.classList.remove("freeze-effect");
+    }, 250);
+  }
 
   currentExtraBallIndexes[hiddenBallIndex] = newIndex;
   ball.dataset.ballIndex = newIndex.toString();
@@ -1145,8 +1305,15 @@ function trySpawnPiggy() {
   if (data.lvls.piggy <= 0) return;
   if (piggyState.active) return;
 
-  const piggyChance = [0, 1, 2, 3][data.lvls.piggy || 0] || 0;
+  let piggyChance = [0, 1, 2, 3][data.lvls.piggy || 0] || 0;
+
+  if (isNightMatch()) {
+    piggyChance *= 2;
+  }
+
   if (Math.random() * 100 >= piggyChance) return;
+
+  // дальше твой старый код появления обычной piggy
 
   const piggy = document.getElementById("piggy");
   if (!piggy) return;
@@ -1174,8 +1341,15 @@ function trySpawnSurprisePiggy() {
   if (data.lvls.surprisePiggy <= 0) return;
   if (surprisePiggyState.active) return;
 
-  const chance = [0, 0.5, 1, 1.5][data.lvls.surprisePiggy || 0] || 0;
-  if (Math.random() * 100 >= chance) return;
+  let surpriseChance = [0, 0.5, 1, 1.5][data.lvls.surprisePiggy || 0] || 0;
+
+  if (isNightMatch()) {
+    surpriseChance *= 2;
+  }
+
+  if (Math.random() * 100 >= surpriseChance) return;
+
+  // дальше твой старый код появления surprise piggy
 
   const piggy = document.getElementById("surprise-piggy");
   if (!piggy) return;
@@ -1438,9 +1612,11 @@ let data = {
       england: false,
       germany: false,
       netherlands: false,
+      cameroon: false,
       norway: false,
       brazil: false,
       italy: false,
+      france: false,
     },
 
     firstClear: {},
@@ -1556,11 +1732,11 @@ let data = {
     viewer: 150,
     friendPower: 10,
     friendSpeed: 20,
-    vStand: 30,
-    fSec: 150,
+    vStand: 20,
+    fSec: 100,
     fan: 1200,
-    attr: 100,
-    drink: 80,
+    attr: 50,
+    drink: 60,
     midas: 50,
     midasCrit: 200,
     reward: 50,
@@ -1568,19 +1744,19 @@ let data = {
     specialCrit: 50,
     equip: 10,
     timeCoin: 300,
-    coach: 40,
+    coach: 30,
     reaction: 200,
     multiBall: 300,
     goldBall: 50,
     fireBall: 600,
     specialReaction: 2000,
-    crystalBall: 150,
-    synergy: 200,
+    crystalBall: 100,
+    synergy: 150,
     piggy: 50,
     surprisePiggy: 100,
     personalReward: 150,
-    adCampaign: 50,
-    crystalTime: 100,
+    adCampaign: 30,
+    crystalTime: 80,
     vip: 150,
     reflex: 1000,
     telekinesis: 200,
@@ -3102,6 +3278,16 @@ let gInt,
   sDogCoins,
   sDogGems,
   actualViewerCount;
+
+let sTeleFireXP = 0;
+let sTeleComboXP = 0;
+
+let sTeleGoldCoins = 0;
+let sTeleComboCoins = 0;
+
+let sTeleCrystalGems = 0;
+let sTeleComboGems = 0;
+
 let extraBalls = [];
 let clonePiggies = [];
 let cloneSurprisePiggies = [];
@@ -3198,7 +3384,7 @@ const competitionLevels = [
 
     special: {
       name: "Counter Attack",
-      chance: 0.15,
+      chance: 0.16,
     },
   },
 
@@ -3299,6 +3485,43 @@ const competitionLevels = [
   },
   {
     id: 4,
+    key: "cameroon",
+    country: "Cameroon",
+    name: "Sam",
+    ovr: 88,
+    bg: "competition/Cameroon.png",
+    opponent: "competition/opponent_cam.png",
+    flag: "flags/cm.png",
+
+    position: {
+      right: 240,
+      bottom: 120,
+      scale: 0.78,
+    },
+
+    stats: {
+      power: 90,
+      critChance: 0.1,
+      critMult: 3,
+      speed: 0.2,
+    },
+
+    special: {
+      name: "Cameroon Lion",
+
+      chance: 0.03,
+
+      clawChance: 0.03,
+      clawTickInterval: 200,
+      clawDamageSteps: [20, 40, 60, 80, 100, 120, 140, 160, 180, 200],
+
+      roarChance: 0.03,
+      roarDuration: 3000,
+      roarMissChance: 25,
+    },
+  },
+  {
+    id: 5,
     key: "norway",
     country: "Norway",
     name: "Alfinssen",
@@ -3310,7 +3533,7 @@ const competitionLevels = [
     position: {
       right: 250,
       bottom: 150,
-      scale: 0.88,
+      scale: 0.86,
     },
 
     stats: {
@@ -3328,7 +3551,35 @@ const competitionLevels = [
     },
   },
   {
-    id: 5,
+    id: 6,
+    key: "italy",
+    country: "Italy",
+    name: "Difensoni",
+    ovr: 92,
+    bg: "competition/Italy.png",
+    opponent: "competition/opponent_ita.png",
+    flag: "flags/it.png",
+
+    position: {
+      right: 250,
+      bottom: 150,
+      scale: 0.82,
+    },
+
+    stats: {
+      power: 20,
+      critChance: 0.05,
+      critMult: 50,
+      speed: 0.15,
+    },
+
+    special: {
+      name: "Italian Wall",
+      chance: 0.8,
+    },
+  },
+  {
+    id: 7,
     key: "brazil",
     country: "Brazil",
     name: "Ronny",
@@ -3351,53 +3602,110 @@ const competitionLevels = [
     },
 
     special: {
-      name: "—",
-      chance: 0,
+      name: "CARNIVAL!",
+      chance: 0.03,
+      duration: 3000,
+      spawnSpeed: 200,
+      cooldown: 4000,
     },
   },
   {
-    id: 6,
-    key: "italy",
-    country: "Italy",
-    name: "Difensoni",
-    ovr: 96,
-    bg: "competition/Italy.png",
-    opponent: "competition/opponent_ita.png",
-    flag: "flags/it.png",
+    id: 8,
+    key: "france",
+    country: "France",
+    name: "Zizou",
+    ovr: 100,
+    bg: "competition/France.png",
+    opponent: "competition/opponent_fra.png",
+    flag: "flags/fr.png",
 
     position: {
-      right: 250,
-      bottom: 150,
-      scale: 0.82,
+      right: 220,
+      bottom: 130,
+      scale: 0.72,
     },
 
     stats: {
-      power: 20,
-      critChance: 0.05,
+      power: 100,
+      critChance: 0.01,
       critMult: 100,
-      speed: 0.15,
+      speed: 0.2,
     },
 
     special: {
-      name: "Italian Wall",
-      chance: 0.8,
+      name: "Marseille Turn",
+      chance: 0.03,
+      window: 3000,
+      turnDuration: 350,
+      cooldown: 3000,
     },
   },
 ];
+let currentNormalFieldType = "normal";
+
+const NORMAL_FIELD_TYPES = {
+  normal: {
+    key: "normal",
+    className: "field-normal",
+    bg: "match/pole.png",
+  },
+  rain: {
+    key: "rain",
+    className: "field-rain",
+    bg: "match/rain.png",
+  },
+  night: {
+    key: "night",
+    className: "field-night",
+    bg: "match/night.png",
+  },
+  snow: {
+    key: "snow",
+    className: "field-snow",
+    bg: "match/snow.png",
+  },
+};
+
+function rollNormalFieldType() {
+  const r = Math.random() * 100;
+
+  if (r < 88) return "normal"; // 88%
+  if (r < 98) return "rain"; // 10%
+  if (r < 99) return "night"; // 1%
+  return "snow"; // 1%
+}
+
+function clearNormalFieldClasses(gameScreen) {
+  gameScreen.classList.remove(
+    "field-normal",
+    "field-rain",
+    "field-night",
+    "field-snow",
+  );
+}
 
 function applyMatchModeView() {
   const gameScreen = document.getElementById("game-screen");
   if (!gameScreen) return;
 
+  clearNormalFieldClasses(gameScreen);
+
   if (currentMode === "competition") {
     const lvl =
       competitionLevels[data.competition.currentLevel] || competitionLevels[0];
+
     gameScreen.classList.add("competition-mode");
     gameScreen.style.backgroundImage = `url("${lvl.bg}")`;
-  } else {
-    gameScreen.classList.remove("competition-mode");
-    gameScreen.style.backgroundImage = 'url("match/pole.png")';
+    return;
   }
+
+  gameScreen.classList.remove("competition-mode");
+
+  const field =
+    NORMAL_FIELD_TYPES[currentNormalFieldType] || NORMAL_FIELD_TYPES.normal;
+
+  gameScreen.classList.add(field.className);
+  gameScreen.style.backgroundImage = `url("${field.bg}")`;
 }
 
 function getReflexInterval() {
@@ -3408,6 +3716,17 @@ function getReflexInterval() {
     interval = Math.floor(interval / 2);
   }
 
+  // Зима: рефлексы медленнее на 200 мс
+  if (interval > 0 && isSnowMatch()) {
+    interval += 200;
+  }
+  if (
+    interval > 0 &&
+    typeof isCameroonRoarActive === "function" &&
+    isCameroonRoarActive()
+  ) {
+    interval *= 2;
+  }
   return interval;
 }
 
@@ -3440,47 +3759,6 @@ function getAutoClickTarget() {
   return null;
 }
 let audioUnlocked = false;
-
-function unlockAudio() {
-  if (audioUnlocked) return Promise.resolve();
-
-  const silentSounds = [];
-
-  menuPlaylist.forEach((track) => {
-    track.muted = true;
-    track.currentTime = 0;
-    silentSounds.push(
-      track
-        .play()
-        .then(() => {
-          track.pause();
-          track.currentTime = 0;
-          track.muted = false;
-        })
-        .catch(() => {
-          track.muted = false;
-        }),
-    );
-  });
-
-  music.game.muted = true;
-  music.game.currentTime = 0;
-  silentSounds.push(
-    music.game
-      .play()
-      .then(() => {
-        music.game.pause();
-        music.game.currentTime = 0;
-        music.game.muted = false;
-      })
-      .catch(() => {
-        music.game.muted = false;
-      }),
-  );
-
-  audioUnlocked = true;
-  return Promise.allSettled(silentSounds);
-}
 
 function showMenuAfterBoot() {
   const bootScreen = document.getElementById("boot-screen");
@@ -3705,6 +3983,19 @@ function getTelekinesisTargets(excludedElement = null) {
     }
   });
 
+  if (typeof carnivalBalls !== "undefined") {
+    carnivalBalls.forEach((ball) => {
+      if (
+        ball &&
+        ball.isConnected &&
+        ball.style.display === "block" &&
+        excludedElement !== ball
+      ) {
+        targets.push(ball);
+      }
+    });
+  }
+
   const piggy = document.getElementById("piggy");
   if (
     piggyState.active &&
@@ -3727,17 +4018,51 @@ function getTelekinesisTargets(excludedElement = null) {
 
   return targets;
 }
+function getHemisphereChance() {
+  const lvl = prestigeData?.skills?.hemisphere || 0;
+  return [0, 15, 30][lvl] || 0;
+}
 
 function applyTelekinesis(sourceElement, sourceEvent) {
-  if ((data.lvls.telekinesis || 0) <= 0) return;
+  const hitTargets = [];
 
-  const chance = getTelekinesisChance();
-  if (Math.random() * 100 >= chance) return;
+  // 1) Обычный телекинез
+  if ((data.lvls.telekinesis || 0) > 0) {
+    const chance = getTelekinesisChance();
 
-  const targets = getTelekinesisTargets(sourceElement);
-  if (targets.length === 0) return;
+    if (Math.random() * 100 < chance) {
+      const targets = getTelekinesisTargets(sourceElement);
 
-  const target = targets[Math.floor(Math.random() * targets.length)];
+      if (targets.length > 0) {
+        const target = targets[Math.floor(Math.random() * targets.length)];
+
+        if (target) {
+          applyTelekinesisHitToTarget(target);
+          hitTargets.push(target);
+        }
+      }
+    }
+  }
+
+  // 2) Второе полушарие — работает даже без обычного телекинеза
+  const hemisphereChance = getHemisphereChance();
+
+  if (hemisphereChance > 0 && Math.random() * 100 < hemisphereChance) {
+    const targets = getTelekinesisTargets(sourceElement).filter(
+      (target) => !hitTargets.includes(target),
+    );
+
+    if (targets.length > 0) {
+      const secondTarget = targets[Math.floor(Math.random() * targets.length)];
+
+      if (secondTarget) {
+        applyTelekinesisHitToTarget(secondTarget);
+      }
+    }
+  }
+}
+
+function applyTelekinesisHitToTarget(target) {
   if (!target) return;
 
   const targetPos = getElementCenter(target);
@@ -3787,17 +4112,10 @@ function applyTelekinesis(sourceElement, sourceEvent) {
     } else {
       updatePiggySprite();
       updatePiggyHpBar();
-
       spawnFloatingText("-" + p, targetPos.x + 10, targetPos.y + 5, "xp");
     }
 
-    const scoreEl = document.getElementById("current-score");
-    const coinsEl = document.getElementById("game-coins");
-    let totalNow = sClick + sFriend + sFooty;
-
-    if (scoreEl) scoreEl.innerText = Math.floor(totalNow);
-    if (coinsEl) coinsEl.innerText = `🟡 ${Math.floor(sCoins)}`;
-
+    refreshMatchRuntimeUI();
     return;
   }
 
@@ -3806,6 +4124,7 @@ function applyTelekinesis(sourceElement, sourceEvent) {
 
     if (surprisePiggyState.hp <= 0) {
       const shockwavePos = targetPos;
+
       sCoins += surprisePiggyState.coinReward;
       sGems += surprisePiggyState.gemReward;
 
@@ -3851,17 +4170,10 @@ function applyTelekinesis(sourceElement, sourceEvent) {
     } else {
       updateSurprisePiggySprite();
       updateSurprisePiggyHpBar();
-
       spawnFloatingText("-" + p, targetPos.x + 10, targetPos.y + 5, "xp");
     }
 
-    const scoreEl = document.getElementById("current-score");
-    const coinsEl = document.getElementById("game-coins");
-    let totalNow = sClick + sFriend + sFooty;
-
-    if (scoreEl) scoreEl.innerText = Math.floor(totalNow);
-    if (coinsEl) coinsEl.innerText = `🟡 ${Math.floor(sCoins)}`;
-
+    refreshMatchRuntimeUI();
     return;
   }
 
@@ -3876,10 +4188,12 @@ function applyTelekinesis(sourceElement, sourceEvent) {
     sBallCoins += amount;
     sGoldCoins += amount;
     sTeleCoins += amount;
-    console.log("TELE GOLD COINS", sTeleCoins);
+    sTeleGoldCoins += amount;
 
     spawnFloatingText("+" + p, targetPos.x + 10, targetPos.y + 5, "xp");
     spawnFloatingText("+" + amount, targetPos.x + 28, targetPos.y - 6, "coin");
+
+    refreshMatchRuntimeUI();
     return;
   }
 
@@ -3891,8 +4205,12 @@ function applyTelekinesis(sourceElement, sourceEvent) {
     sClick += p;
     sBallXP += bonusXP;
     sFireXP += bonusXP;
+    sTeleFireXP += bonusXP;
+    sTeleXP += p;
 
     spawnFloatingText("+" + p, targetPos.x + 10, targetPos.y + 5, "xp");
+
+    refreshMatchRuntimeUI();
     return;
   }
 
@@ -3905,17 +4223,21 @@ function applyTelekinesis(sourceElement, sourceEvent) {
     sBallXP += bonusXP;
     sComboXP += bonusXP;
     sTeleXP += p;
+    sTeleComboXP += bonusXP;
 
     let amount = 1;
+
     sCoins += amount;
     sBallCoins += amount;
     sComboCoins += amount;
     sTeleCoins += amount;
+    sTeleComboCoins += amount;
 
     sGems += amount;
     sBallGems += amount;
     sComboGems += amount;
     sTeleGems += amount;
+    sTeleComboGems += amount;
 
     spawnFloatingText("+" + p, targetPos.x + 10, targetPos.y + 5, "xp");
     spawnFloatingText("+" + amount, targetPos.x + 28, targetPos.y - 6, "coin");
@@ -3925,6 +4247,8 @@ function applyTelekinesis(sourceElement, sourceEvent) {
       targetPos.y + 14,
       "xp",
     );
+
+    refreshMatchRuntimeUI();
     return;
   }
 
@@ -3933,17 +4257,12 @@ function applyTelekinesis(sourceElement, sourceEvent) {
     sTeleXP += p;
 
     let amount = 1;
+
     sGems += amount;
     sBallGems += amount;
     sCrystalGems += amount;
     sTeleGems += amount;
-
-    console.log(
-      "TELE CRYSTAL GEMS",
-      sTeleGems,
-      target?.dataset?.ballType,
-      target,
-    );
+    sTeleCrystalGems += amount;
 
     spawnFloatingText("+" + p, targetPos.x + 10, targetPos.y + 5, "xp");
     spawnFloatingText(
@@ -3952,6 +4271,8 @@ function applyTelekinesis(sourceElement, sourceEvent) {
       targetPos.y - 6,
       "xp",
     );
+
+    refreshMatchRuntimeUI();
     return;
   }
 
@@ -3959,6 +4280,8 @@ function applyTelekinesis(sourceElement, sourceEvent) {
   sTeleXP += p;
 
   spawnFloatingText("+" + p, targetPos.x + 10, targetPos.y + 5, "xp");
+
+  refreshMatchRuntimeUI();
 }
 
 function playShockwaveRing(x, y) {
@@ -4355,6 +4678,12 @@ document.addEventListener("mousemove", (e) => {
 function startGame(mode = "normal") {
   currentMode = mode;
 
+  if (mode === "normal") {
+    currentNormalFieldType = rollNormalFieldType();
+  } else {
+    currentNormalFieldType = "normal";
+  }
+
   if (mode === "competition") {
     playCompetitionMusic(data.competition.selected || "spain");
   } else {
@@ -4404,6 +4733,12 @@ function startGame(mode = "normal") {
     sDogCoins =
     sDogGems =
     sCompetitionDrain =
+    sTeleFireXP =
+    sTeleComboXP =
+    sTeleGoldCoins =
+    sTeleComboCoins =
+    sTeleCrystalGems =
+    sTeleComboGems =
       0;
 
   piggyState.active = false;
@@ -4453,7 +4788,7 @@ function startGame(mode = "normal") {
   let maxT;
 
   if (currentMode === "competition") {
-    maxT = 15000; // 15 секунд
+    maxT = 18000; // 18 секунд
   } else {
     maxT = (11 + data.lvls.time) * 1000;
   }
@@ -4514,6 +4849,9 @@ function startGame(mode = "normal") {
     if (Math.random() * 100 < viewerChance) {
       actualViewerCount++;
     }
+  }
+  if (isNightMatch()) {
+    actualViewerCount = 0;
   }
 
   updateViewersDisplay();
@@ -4608,6 +4946,18 @@ function startGame(mode = "normal") {
       if ((prestigeData?.skills?.madDog || 0) > 0) {
         neededTicks -= 2;
       }
+      if (isRainMatch()) {
+        neededTicks = Math.ceil(neededTicks / 2);
+      }
+      if (isNightMatch()) {
+        neededTicks = Math.ceil(neededTicks / 2);
+      }
+      if (
+        typeof isCameroonRoarActive === "function" &&
+        isCameroonRoarActive()
+      ) {
+        neededTicks *= 2;
+      }
 
       if (neededTicks < 1) neededTicks = 1;
 
@@ -4618,6 +4968,9 @@ function startGame(mode = "normal") {
           data.lvls.friend +
           (data.lvls.friendPower || 0) * 2 +
           (dogPowerBonuses[prestigeData?.skills?.dogPower || 0] || 0);
+        if (isNightMatch()) {
+          fPower *= 2;
+        }
 
         let isFriendCrit = false;
         let gotCoin = false;
@@ -4629,13 +4982,16 @@ function startGame(mode = "normal") {
           ? (prestigeData?.skills?.dogCritChance || 0) * 5
           : 0;
 
-        const dogCritPowerBonus = hasFriendCritSkill
-          ? prestigeData?.skills?.dogCritPower || 0
-          : 0;
+        const dogCritPowerBonus =
+          hasFriendCritSkill || isNightMatch()
+            ? prestigeData?.skills?.dogCritPower || 0
+            : 0;
 
-        const friendCritChance = hasFriendCritSkill
-          ? (data.lvls.fCrit || 0) * 5 + dogCritChanceBonus
-          : 0;
+        const friendCritChance = isNightMatch()
+          ? 100
+          : hasFriendCritSkill
+            ? (data.lvls.fCrit || 0) * 5 + dogCritChanceBonus
+            : 0;
 
         const friendCritMultiplier = 3 + dogCritPowerBonus;
 
@@ -4753,6 +5109,11 @@ function handleKick(event) {
   const clickedBall = event.currentTarget;
   const ballType = clickedBall?.dataset?.ballType || "normal";
 
+  if (rollPlayerMiss()) {
+    spawnFloatingText("MISS", event.clientX, event.clientY - 25, "miss");
+    return;
+  }
+
   const isSpecialBall =
     ballType === "gold" ||
     ballType === "fire" ||
@@ -4769,20 +5130,25 @@ function handleKick(event) {
   let isSuperCrit = false;
 
   const hasCritSkill = (data.lvls.crit || 0) > 0;
+  const forceSnowCrit = isSnowMatch();
 
   const prestigeCritChance = hasCritSkill
     ? (prestigeData?.skills?.playerCritChance || 0) * 2
     : 0;
 
-  const critChance = hasCritSkill
-    ? (data.lvls.crit || 0) * 2 + prestigeCritChance
-    : 0;
+  const critChance = forceSnowCrit
+    ? 100
+    : hasCritSkill
+      ? (data.lvls.crit || 0) * 2 + prestigeCritChance
+      : 0;
 
-  const prestigeCritPower = hasCritSkill
-    ? prestigeData?.skills?.playerCritPower || 0
-    : 0;
+  const prestigeCritPower =
+    hasCritSkill || forceSnowCrit
+      ? prestigeData?.skills?.playerCritPower || 0
+      : 0;
 
-  const critMultiplier = 3 + prestigeCritPower;
+  const rainCritBonus = isRainMatch() ? 2 : 0;
+  const critMultiplier = 3 + prestigeCritPower + rainCritBonus;
 
   if (critChance > 0 && Math.random() * 100 < critChance) {
     p *= critMultiplier;
@@ -5091,7 +5457,8 @@ function handleKick(event) {
 
   if (isSpecialBall && data.lvls.specialCrit > 0) {
     const specialCritChances = [0, 5, 10, 15];
-    const prestigeBonus = (prestigeData.skills.specialCrits || 0) * 5;
+
+    const prestigeBonus = (prestigeData.skills.playerCritChance || 0) * 5;
 
     const specialCritChance =
       (specialCritChances[data.lvls.specialCrit] || 0) + prestigeBonus;
@@ -5387,7 +5754,7 @@ function stopGame() {
   let fC = (data.lvls.fan || 0) + (data.lvls.fSec || 0) * 10;
   let totalPeople = vC + fC;
 
-  if (currentMode === "competition") {
+  if (currentMode === "competition" || isNightMatch()) {
     vC = 0;
     fC = 0;
     totalPeople = 0;
@@ -5395,7 +5762,7 @@ function stopGame() {
 
   let vipChance = 0;
 
-  if (currentMode !== "competition") {
+  if (currentMode !== "competition" && !isNightMatch()) {
     vipChance = [0, 30, 60, 90][data.lvls.vip || 0] || 0;
 
     if (Math.random() * 100 < vipChance) {
@@ -5502,11 +5869,13 @@ function stopGame() {
     const firstClearBonuses = {
       spain: { coins: 600, gems: 60 },
       england: { coins: 800, gems: 80 },
-      germany: { coins: 1000, gems: 100 },
-      netherlands: { coins: 1200, gems: 120 },
+      netherlands: { coins: 1000, gems: 100 },
+      germany: { coins: 1200, gems: 120 },
+      cameroon: { coins: 1350, gems: 135 },
       norway: { coins: 1500, gems: 150 },
-      brazil: { coins: 2000, gems: 200 },
-      italy: { coins: 2500, gems: 250 },
+      italy: { coins: 2000, gems: 200 },
+      brazil: { coins: 2500, gems: 250 },
+      france: { coins: 3000, gems: 300 },
     };
 
     if (
@@ -5578,14 +5947,23 @@ function stopGame() {
         }
 
         if (selected === "germany") {
+          data.competition.unlocked.cameroon = true;
+        }
+
+        if (selected === "cameroon") {
           data.competition.unlocked.norway = true;
         }
+
         if (selected === "norway") {
+          data.competition.unlocked.italy = true;
+        }
+
+        if (selected === "italy") {
           data.competition.unlocked.brazil = true;
         }
 
         if (selected === "brazil") {
-          data.competition.unlocked.italy = true;
+          data.competition.unlocked.france = true;
         }
       } else if (playerScore < enemyScore) {
         title.innerText = "❌ ПОРАЖЕНИЕ";
@@ -5606,22 +5984,34 @@ function stopGame() {
   let totalMatchCoins = sCoins + cBase + cExtra;
   let totalMatchGems = sGems;
 
+  const pureClickXP = Math.max(0, sClick - sTeleXP);
+  const pureFireXP = Math.max(0, sFireXP - sTeleFireXP);
+  const pureComboXP = Math.max(0, sComboXP - sTeleComboXP);
+
+  const pureGoldCoins = Math.max(0, sGoldCoins - sTeleGoldCoins);
+  const pureComboCoins = Math.max(0, sComboCoins - sTeleComboCoins);
+
+  const pureCrystalGems = Math.max(0, sCrystalGems - sTeleCrystalGems);
+
+  const pureComboGems = Math.max(0, sComboGems - sTeleComboGems);
+
   const setVal = (id, val) => {
     const el = document.getElementById(id);
     if (el) el.innerText = val;
   };
 
   setVal("res-time", (totalEl / 1000).toFixed(1) + "s");
+
   if (currentMode !== "competition") {
     setVal("res-visitors", totalPeople);
   }
 
   setVal("res-xp-total", totalXP);
-  setVal("res-xp-click", Math.floor(sClick));
+  setVal("res-xp-click", Math.floor(pureClickXP));
   setVal("res-xp-friend", Math.floor(sFriend));
   setVal("res-xp-footy", Math.floor(sFooty));
-  setVal("res-xp-fire", Math.floor(sFireXP));
-  setVal("res-xp-combo", Math.floor(sComboXP));
+  setVal("res-xp-fire", Math.floor(pureFireXP));
+  setVal("res-xp-combo", Math.floor(pureComboXP));
   setVal("res-xp-tele", Math.floor(sTeleXP));
 
   setVal("res-coin-total", totalMatchCoins);
@@ -5629,21 +6019,20 @@ function stopGame() {
   setVal("res-coin-luck", Math.floor(sLuckCoins));
   setVal("res-coin-midas", Math.floor(sMidasCoins));
   setVal("res-coin-reward", Math.floor(sRewardCoins));
-  setVal("res-coin-gold", Math.floor(sGoldCoins));
-  setVal("res-coin-combo", Math.floor(sComboCoins));
+  setVal("res-coin-gold", Math.floor(pureGoldCoins));
+  setVal("res-coin-combo", Math.floor(pureComboCoins));
   setVal("res-coin-piggy", Math.floor(sPiggyCoins));
   setVal("res-coin-tele", Math.floor(sTeleCoins));
   setVal("res-coin-drink", drinkMoney);
   setVal("res-coin-attr", attrMoney);
   setVal("res-coin-dog", Math.floor(sDogCoins));
 
-  setVal("res-gem-crystal", Math.floor(sCrystalGems));
-  setVal("res-gem-combo", Math.floor(sComboGems));
+  setVal("res-gem-crystal", Math.floor(pureCrystalGems));
+  setVal("res-gem-combo", Math.floor(pureComboGems));
   setVal("res-gem-vip", Math.floor(sVipGems));
   setVal("res-gem-time", Math.floor(sCrystalTimeGems));
   setVal("res-gem-personal", Math.floor(sPersonalRewardGems));
   setVal("res-gem-piggy", Math.floor(sPiggyGems));
-  console.log("STOPGAME sTeleGems =", sTeleGems);
   setVal("res-gem-tele", Math.floor(sTeleGems));
   setVal("res-gem-dog", Math.floor(sDogGems));
   setVal("res-gem-total", Math.floor(totalMatchGems));
@@ -5653,8 +6042,8 @@ function stopGame() {
   data.gems += totalMatchGems;
   updateUI();
 
-  if (sFireXP > 0) showEl("row-res-fire-xp");
-  if (sComboXP > 0) showEl("row-res-combo-xp");
+  if (pureFireXP > 0) showEl("row-res-fire-xp");
+  if (pureComboXP > 0) showEl("row-res-combo-xp");
   if (data.lvls.friend > 0) showEl("row-res-friend-xp");
   if (data.lvls.footy > 0) showEl("row-res-footy-xp");
   if (sTeleXP > 0) showEl("row-res-tele-xp");
@@ -5685,12 +6074,12 @@ function stopGame() {
     showEl("row-res-dog-coin");
   }
 
-  if (sGoldCoins > 0) {
+  if (pureGoldCoins > 0) {
     showEl("summary-coin-col", "block");
     showEl("row-res-gold-coin");
   }
 
-  if (sComboCoins > 0) {
+  if (pureComboCoins > 0) {
     showEl("summary-coin-col", "block");
     showEl("row-res-combo-coin");
   }
@@ -5712,12 +6101,12 @@ function stopGame() {
     showEl("summary-gem-col", "block");
 
     if (sPiggyGems > 0) showEl("row-res-gem-piggy");
-    if (sCrystalGems > 0) showEl("row-res-gem-crystal");
-    if (sComboGems > 0) showEl("row-res-gem-combo");
+    if (pureCrystalGems > 0) showEl("row-res-gem-crystal");
+    if (pureComboGems > 0) showEl("row-res-gem-combo");
     if (sVipGems > 0) showEl("row-res-gem-vip");
     if (sCrystalTimeGems > 0) showEl("row-res-gem-time");
     if (sPersonalRewardGems > 0) showEl("row-res-gem-personal");
-    if (sTeleGems > 0) showEl("row-res-gem-tele");
+    if (sTeleGems > 0) showEl("row-res-tele-gem");
     if (sDogGems > 0) showEl("row-res-gem-dog");
 
     showEl("row-res-total-gem");
@@ -5761,7 +6150,7 @@ function closeSummary() {
     "row-res-gem-piggy",
     "row-res-tele-xp",
     "row-res-tele-coin",
-    "row-res-gem-tele",
+    "row-res-tele-gem",
     "row-res-dog-coin",
     "row-res-gem-dog",
   ];
@@ -5857,18 +6246,29 @@ function updateLiveStats() {
       prestigeReactionBonus
     ).toFixed(2) + "с";
 
-  const prestigeCritChance = (prestigeSkills.playerCritChance || 0) * 2;
+  const hasCritSkill = (data.lvls.crit || 0) > 0;
 
-  const critVal = (data.lvls.crit || 0) * 2 + prestigeCritChance + "%";
+  const prestigeCritChance = hasCritSkill
+    ? (prestigeSkills.playerCritChance || 0) * 2
+    : 0;
+
+  const critVal = hasCritSkill
+    ? (data.lvls.crit || 0) * 2 + prestigeCritChance + "%"
+    : "0%";
 
   const delayVal = [0, 0.5, 1, 2][data.lvls.delay] + "%";
 
-  const prestigeSpecialCrit = (prestigeSkills.specialCrits || 0) * 5;
+  const hasSpecialCritSkill = (data.lvls.specialCrit || 0) > 0;
 
-  const specialCritVal =
-    ([0, 5, 10, 15][data.lvls.specialCrit || 0] || 0) +
-    prestigeSpecialCrit +
-    "%";
+  const prestigeSpecialCrit = hasSpecialCritSkill
+    ? (prestigeSkills.playerCritChance || 0) * 5
+    : 0;
+
+  const specialCritVal = hasSpecialCritSkill
+    ? ([0, 5, 10, 15][data.lvls.specialCrit || 0] || 0) +
+      prestigeSpecialCrit +
+      "%"
+    : "0%";
 
   const peopleVal = "~" + getExpectedPeople();
   const incomeVal = "~" + getExpectedIncome();
@@ -5934,8 +6334,8 @@ function updateLiveStats() {
   let showMiddle = false;
 
   if (rowTopCrit) {
-    const show =
-      data.lvls.crit > 0 || (prestigeSkills.playerCritChance || 0) > 0;
+    const show = (data.lvls.crit || 0) > 0;
+
     rowTopCrit.style.display = show ? "block" : "none";
     if (show) showMiddle = true;
   }
@@ -5974,10 +6374,9 @@ function updateLiveStats() {
   if (rowTopPeople) rowTopPeople.style.display = showRight ? "block" : "none";
   if (rowTopIncome) rowTopIncome.style.display = showRight ? "block" : "none";
   if (rowTopSpecialCrit) {
-    rowTopSpecialCrit.style.display =
-      data.lvls.specialCrit > 0 || (prestigeSkills.specialCrits || 0) > 0
-        ? "block"
-        : "none";
+    const show = (data.lvls.specialCrit || 0) > 0;
+
+    rowTopSpecialCrit.style.display = show ? "block" : "none";
   }
 }
 initTree();
@@ -6035,8 +6434,10 @@ function initAdminControls() {
         data.competition.unlocked.germany = true;
         data.competition.unlocked.netherlands = true;
         data.competition.unlocked.norway = true;
-        data.competition.unlocked.brazil = false;
-        data.competition.unlocked.italy = false;
+        data.competition.unlocked.brazil = true;
+        data.competition.unlocked.italy = true;
+        data.competition.unlocked.cameroon = true;
+        data.competition.unlocked.france = true;
       }
 
       updateUI();
@@ -6108,9 +6509,9 @@ function closeCompetitionSummary() {
 
   hideCompetitionPlayerCardClone();
   hideCompetitionEnemyCard();
-  updatePitbullVisibility();
 
   currentMode = "normal";
+  updatePitbullVisibility();
   applyCompetitionVisuals();
   updateUI();
 

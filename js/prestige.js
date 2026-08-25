@@ -7,7 +7,7 @@ let prestigeData = {
     playerCritChance: 0,
     playerCritPower: 0,
     superReaction: 0,
-    specialCrits: 0,
+    hemisphere: 0,
     speedDemon: 0,
 
     dogPower: 0,
@@ -49,16 +49,16 @@ const prestigeSkills = [
     max: 2,
   },
   {
-    k: "specialCrits",
-    name: "ОХОТА ЗА МЯЧОМ",
-    desc: "+5% шанс крита по особым мячам за уровень",
+    k: "hemisphere",
+    name: "ВТОРОЕ ПОЛУШАРИЕ",
+    desc: "Телекинез может поразить вторую цель с шансом 15% и 30% на втором уровне",
     group: "advanced",
     max: 2,
   },
   {
     k: "speedDemon",
     name: "ДЕМОН СКОРОСТИ",
-    desc: "Рефлекс работает в 2 раза быстрее",
+    desc: "Рефлекс работает в 2 раза быстрее. Даёт автоудар с интервалом 0.3с без прокаченого рефлекса",
     group: "ultimate",
     max: 1,
   },
@@ -137,17 +137,19 @@ function canSeePrestigeSkill(skill) {
   if (skill.group === "basic") return true;
 
   // Второй ряд игрока
-  if (skill.k === "superReaction" || skill.k === "specialCrits") {
-    return (
-      (s.playerPower || 0) > 0 ||
-      (s.playerCritChance || 0) > 0 ||
-      (s.playerCritPower || 0) > 0
-    );
+  // Второй ряд игрока — Концентрация
+  if (skill.k === "superReaction") {
+    return (s.playerPower || 0) > 0 || (s.playerCritChance || 0) > 0;
+  }
+
+  // Второй ряд игрока — Второе полушарие
+  if (skill.k === "hemisphere") {
+    return (s.playerCritChance || 0) > 0 || (s.playerCritPower || 0) > 0;
   }
 
   // Третий ряд игрока
   if (skill.k === "speedDemon") {
-    return (s.superReaction || 0) > 0 || (s.specialCrits || 0) > 0;
+    return (s.superReaction || 0) > 0 || (s.hemisphere || 0) > 0;
   }
 
   // Второй ряд пса

@@ -743,6 +743,22 @@ body {
   margin: 10px auto 0 auto;
 }
 
+#game-screen.field-normal {
+  background-image: url("../match/pole.png");
+}
+
+#game-screen.field-rain {
+  background-image: url("../match/rain.png");
+}
+
+#game-screen.field-night {
+  background-image: url("../match/night.png");
+}
+
+#game-screen.field-snow {
+  background-image: url("../match/snow.png");
+}
+
 #game-screen.competition-mode {
   background-image: url("../competition/England.png");
 }
@@ -986,6 +1002,22 @@ body {
     opacity: 0;
   }
 }
+
+.floating-miss {
+  position: absolute;
+  pointer-events: none;
+  font-weight: bold;
+  font-size: 1.6rem;
+  color: #bfc7d5;
+  text-shadow:
+    -2px -2px 0 #000,
+    2px -2px 0 #000,
+    -2px 2px 0 #000,
+    2px 2px 0 #000;
+  animation: floatUp 0.7s ease-out forwards;
+  z-index: 1000;
+}
+
 .skill-node {
   position: absolute;
   width: 90px;
@@ -3116,7 +3148,7 @@ body {
   top: 330px;
 }
 
-#prestige-specialCrits {
+#prestige-hemisphere {
   left: 225px;
   top: 330px;
 }
@@ -3239,4 +3271,184 @@ body {
 .msg-btn-cancel:active {
   transform: translateY(3px);
   box-shadow: 0 2px 0 #242432;
+}
+
+.cameroon-claw-effect {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+
+  width: 680px;
+  height: auto;
+
+  transform: translate(-50%, -50%) rotate(-4deg) scale(0.85);
+
+  z-index: 950;
+  pointer-events: none;
+
+  image-rendering: pixelated;
+
+  animation: cameroonClawSlash 0.9s ease-out forwards;
+}
+
+.cameroon-red-flash {
+  position: absolute;
+  inset: 0;
+
+  background: rgba(255, 0, 0, 0.32);
+
+  z-index: 940;
+  pointer-events: none;
+
+  animation: cameroonRedFlash 0.45s ease-out forwards;
+}
+
+.cameroon-claw-shake {
+  animation: cameroonScreenShake 0.45s linear;
+}
+
+@keyframes cameroonClawSlash {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(-4deg) scale(0.65);
+    filter: brightness(1.4) drop-shadow(0 0 0 rgba(255, 0, 0, 0));
+  }
+
+  15% {
+    opacity: 1;
+    transform: translate(-50%, -50%) rotate(-4deg) scale(0.9);
+    filter: brightness(1.6) drop-shadow(0 0 12px rgba(255, 0, 0, 0.8));
+  }
+
+  70% {
+    opacity: 1;
+    transform: translate(-50%, -50%) rotate(-4deg) scale(0.92);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(-4deg) scale(1.02);
+    filter: brightness(0.9) drop-shadow(0 0 22px rgba(255, 0, 0, 0.5));
+  }
+}
+
+@keyframes cameroonRedFlash {
+  0% {
+    opacity: 0;
+  }
+
+  15% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes cameroonScreenShake {
+  0% {
+    transform: translate(0, 0);
+  }
+
+  20% {
+    transform: translate(-5px, 3px);
+  }
+
+  40% {
+    transform: translate(5px, -3px);
+  }
+
+  60% {
+    transform: translate(-4px, -2px);
+  }
+
+  80% {
+    transform: translate(4px, 2px);
+  }
+
+  100% {
+    transform: translate(0, 0);
+  }
+}
+.cameroon-roar-flash {
+  position: absolute;
+  inset: 0;
+
+  background:
+    radial-gradient(
+      circle,
+      rgba(255, 130, 0, 0.38),
+      rgba(255, 0, 0, 0.12),
+      transparent 70%
+    ),
+    rgba(120, 0, 0, 0.18);
+
+  z-index: 930;
+  pointer-events: none;
+
+  animation: cameroonRoarFlash 0.9s ease-out forwards;
+}
+
+.cameroon-roar-active::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+
+  background: radial-gradient(
+    circle at center,
+    transparent 35%,
+    rgba(120, 0, 0, 0.22) 100%
+  );
+
+  pointer-events: none;
+  z-index: 920;
+}
+
+.cameroon-roar-shake {
+  animation: cameroonRoarShake 0.6s linear;
+}
+
+@keyframes cameroonRoarFlash {
+  0% {
+    opacity: 0;
+  }
+
+  15% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes cameroonRoarShake {
+  0% {
+    transform: translate(0, 0);
+  }
+
+  15% {
+    transform: translate(-7px, 0);
+  }
+
+  30% {
+    transform: translate(7px, 0);
+  }
+
+  45% {
+    transform: translate(-5px, 2px);
+  }
+
+  60% {
+    transform: translate(5px, -2px);
+  }
+
+  75% {
+    transform: translate(-3px, 1px);
+  }
+
+  100% {
+    transform: translate(0, 0);
+  }
 }

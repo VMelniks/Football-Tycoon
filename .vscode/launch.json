@@ -1,0 +1,12 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "firefox",
+      "request": "launch",
+      "name": "Запустить Football Journey",
+      "url": "http://127.0.0.1:5500/FootballTycoon-v1.75.htm",
+      "webRoot": "${workspaceFolder}"
+    }
+  ]
+}
