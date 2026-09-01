@@ -545,6 +545,10 @@ function rollBallType() {
   if (currentMode === "competition") {
     return "normal";
   }
+
+  if (isAutumnMatch()) {
+    return "gold";
+  }
   let comboChance = [0, 0.5, 1, 1.5][data.lvls.synergy || 0] || 0;
   let fireChance = [0, 3, 6, 9][data.lvls.fireBall || 0] || 0;
   let goldChance = [0, 2, 4, 6][data.lvls.goldBall || 0] || 0;
@@ -656,6 +660,10 @@ function isSnowMatch() {
   return currentMode === "normal" && currentNormalFieldType === "snow";
 }
 
+function isAutumnMatch() {
+  return currentMode === "normal" && currentNormalFieldType === "autumn";
+}
+
 function getExtraBallLifeTime() {
   const prestigeSkills =
     typeof prestigeData !== "undefined" && prestigeData.skills
@@ -723,7 +731,7 @@ function moveAllBallsToRandomPositions() {
 
   const mainBall = document.getElementById("ball");
   if (mainBall) {
-    applyBallType(mainBall, "normal");
+    applyBallType(mainBall, isAutumnMatch() ? "gold" : "normal");
   }
 }
 
@@ -1302,6 +1310,7 @@ function updateKiosks() {
 }
 
 function trySpawnPiggy() {
+  if (isAutumnMatch()) return;
   if (data.lvls.piggy <= 0) return;
   if (piggyState.active) return;
 
@@ -1338,6 +1347,7 @@ function trySpawnPiggy() {
 }
 
 function trySpawnSurprisePiggy() {
+  if (isAutumnMatch()) return;
   if (data.lvls.surprisePiggy <= 0) return;
   if (surprisePiggyState.active) return;
 
@@ -1670,6 +1680,8 @@ let data = {
     freezing: 0,
     freezingTime: 0,
     competition: 0,
+    jewelry: 0,
+    record: 0,
   },
   max: {
     click: 10,
@@ -1717,6 +1729,8 @@ let data = {
     freezing: 3,
     freezingTime: 3,
     competition: 1,
+    jewelry: 1,
+    record: 3,
   },
 
   costs: {
@@ -1765,6 +1779,8 @@ let data = {
     freezing: 100,
     freezingTime: 200,
     competition: 1000,
+    jewelry: 500,
+    record: 100,
   },
 };
 
@@ -2086,6 +2102,20 @@ const nodeData = [
     cur: "coin",
     desc: "Даёт 💎 за личный XP: 1500 / 1250 / 1000",
   },
+  {
+    id: "node-record",
+    k: "record",
+    name: "РЕКОРДСМЕН",
+    cur: "coin",
+    desc: "Даёт бонусные монеты за новый рекорд опыта:20🟡/ 40🟡 / 60🟡",
+  },
+  {
+    id: "node-jewelry",
+    k: "jewelry",
+    name: "ЮВЕЛИРНЫЙ МАГАЗИН",
+    cur: "coin",
+    desc: "Открывает обмен валют: купить 1💎 за 200🟡 или продать 1💎 за 50🟡",
+  },
 
   {
     id: "node-competition",
@@ -2403,9 +2433,16 @@ function updatePlayerCardStats() {
     ) + "с";
 
   let reflexVal = "0";
-  if ((lvls.reflex || 0) > 0) {
+
+  const hasReflex = (lvls.reflex || 0) > 0;
+  const hasSpeedDemon = (prestigeSkills.speedDemon || 0) > 0;
+
+  if (hasReflex || hasSpeedDemon) {
     const reflexMs = getReflexInterval();
-    reflexVal = (reflexMs / 1000).toFixed(2) + "с";
+
+    if (reflexMs > 0) {
+      reflexVal = (reflexMs / 1000).toFixed(2) + "с";
+    }
   }
 
   if (clickStat) clickStat.innerText = damageVal;
@@ -2501,6 +2538,10 @@ function updateMenuHistoryPanels() {
   const recordCoinsEl = document.getElementById("record-coins");
   const recordGemsEl = document.getElementById("record-gems");
   const recordTimeEl = document.getElementById("record-time");
+  const lifeRecordXpEl = document.getElementById("life-record-xp");
+  const lifeRecordCoinsEl = document.getElementById("life-record-coins");
+  const lifeRecordGemsEl = document.getElementById("life-record-gems");
+  const lifeRecordTimeEl = document.getElementById("life-record-time");
 
   const lastXpEl = document.getElementById("last-xp");
   const lastCoinsEl = document.getElementById("last-coins");
@@ -2514,6 +2555,9 @@ function updateMenuHistoryPanels() {
 
   const recordCoinsRow = document.getElementById("record-coins-row");
   const recordGemsRow = document.getElementById("record-gems-row");
+  const lifeRecordCoinsRow = document.getElementById("life-record-coins-row");
+
+  const lifeRecordGemsRow = document.getElementById("life-record-gems-row");
   const lastCoinsRow = document.getElementById("last-coins-row");
   const lastGemsRow = document.getElementById("last-gems-row");
   const totalCoinsRow = document.getElementById("total-earned-coins-row");
@@ -2527,6 +2571,21 @@ function updateMenuHistoryPanels() {
     recordGemsEl.innerText = Math.floor(matchHistory.records.gems || 0);
   if (recordTimeEl)
     recordTimeEl.innerText = formatMenuRunTime(matchHistory.records.timeMs);
+  if (lifeRecordXpEl)
+    lifeRecordXpEl.innerText = Math.floor(matchHistory.lifeRecords.xp || 0);
+
+  if (lifeRecordCoinsEl)
+    lifeRecordCoinsEl.innerText = Math.floor(
+      matchHistory.lifeRecords.coins || 0,
+    );
+
+  if (lifeRecordGemsEl)
+    lifeRecordGemsEl.innerText = Math.floor(matchHistory.lifeRecords.gems || 0);
+
+  if (lifeRecordTimeEl)
+    lifeRecordTimeEl.innerText = formatMenuRunTime(
+      matchHistory.lifeRecords.timeMs,
+    );
 
   if (lastXpEl) lastXpEl.innerText = Math.floor(matchHistory.last.xp || 0);
   if (lastCoinsEl)
@@ -2576,10 +2635,14 @@ function updateMenuHistoryPanels() {
 
   if (recordCoinsRow)
     recordCoinsRow.style.display = showCoins ? "flex" : "none";
+  if (lifeRecordCoinsRow)
+    lifeRecordCoinsRow.style.display = showCoins ? "flex" : "none";
   if (lastCoinsRow) lastCoinsRow.style.display = showCoins ? "flex" : "none";
   if (totalCoinsRow) totalCoinsRow.style.display = showCoins ? "flex" : "none";
 
   if (recordGemsRow) recordGemsRow.style.display = showGems ? "flex" : "none";
+  if (lifeRecordGemsRow)
+    lifeRecordGemsRow.style.display = showGems ? "flex" : "none";
   if (lastGemsRow) lastGemsRow.style.display = showGems ? "flex" : "none";
   if (totalGemsRow) totalGemsRow.style.display = showGems ? "flex" : "none";
 }
@@ -2623,6 +2686,21 @@ function registerMatchResults() {
 
   if (totalTime > (matchHistory.records.timeMs || 0)) {
     matchHistory.records.timeMs = totalTime;
+  }
+  if (totalXp > (matchHistory.lifeRecords.xp || 0)) {
+    matchHistory.lifeRecords.xp = totalXp;
+  }
+
+  if (totalCoins > (matchHistory.lifeRecords.coins || 0)) {
+    matchHistory.lifeRecords.coins = totalCoins;
+  }
+
+  if (totalGems > (matchHistory.lifeRecords.gems || 0)) {
+    matchHistory.lifeRecords.gems = totalGems;
+  }
+
+  if (totalTime > (matchHistory.lifeRecords.timeMs || 0)) {
+    matchHistory.lifeRecords.timeMs = totalTime;
   }
 
   updateMenuHistoryPanels();
@@ -2753,6 +2831,105 @@ function updateCompetitionButton() {
   if (!btn) return;
 
   btn.style.display = data.lvls.competition > 0 ? "inline-flex" : "none";
+}
+function updateJewelryButton() {
+  const btn = document.getElementById("open-jewelry-btn");
+  if (!btn) return;
+
+  btn.style.display = (data.lvls.jewelry || 0) > 0 ? "inline-flex" : "none";
+}
+function updateJewelryMenu() {
+  const coinsEl = document.getElementById("jewelry-coins");
+  const gemsEl = document.getElementById("jewelry-gems");
+
+  if (coinsEl) coinsEl.innerText = Math.floor(data.coins || 0);
+  if (gemsEl) gemsEl.innerText = Math.floor(data.gems || 0);
+}
+
+function openJewelryMenu() {
+  if ((data.lvls.jewelry || 0) <= 0) return;
+
+  const overlay = document.getElementById("jewelry-menu-overlay");
+  if (!overlay) return;
+
+  updateJewelryMenu();
+  overlay.style.display = "flex";
+}
+
+function closeJewelryMenu() {
+  const overlay = document.getElementById("jewelry-menu-overlay");
+  if (!overlay) return;
+
+  overlay.style.display = "none";
+}
+
+function buyJewelryGems(amount) {
+  if ((data.lvls.jewelry || 0) <= 0) return;
+
+  const pricePerGem = 200;
+
+  let gemAmount;
+
+  if (amount === "max") {
+    gemAmount = Math.floor((data.coins || 0) / pricePerGem);
+  } else {
+    gemAmount = Number(amount);
+  }
+
+  if (!gemAmount || gemAmount <= 0) {
+    showGameMessage("❌ НЕДОСТАТОЧНО МОНЕТ", "Для покупки 1💎 нужно 200🟡.");
+    return;
+  }
+
+  const totalPrice = gemAmount * pricePerGem;
+
+  if (data.coins < totalPrice) {
+    showGameMessage(
+      "❌ НЕДОСТАТОЧНО МОНЕТ",
+      `Для покупки ${gemAmount}💎 нужно ${totalPrice}🟡.`,
+    );
+    return;
+  }
+
+  data.coins -= totalPrice;
+  data.gems += gemAmount;
+
+  updateUI();
+  updateJewelryMenu();
+}
+function sellJewelryGems(amount) {
+  if ((data.lvls.jewelry || 0) <= 0) return;
+
+  const coinsPerGem = 50;
+
+  let gemAmount;
+
+  if (amount === "max") {
+    gemAmount = Math.floor(data.gems || 0);
+  } else {
+    gemAmount = Number(amount);
+  }
+
+  if (!gemAmount || gemAmount <= 0) {
+    showGameMessage("❌ НЕТ КРИСТАЛЛОВ", "У вас нет кристаллов для продажи.");
+    return;
+  }
+
+  if (data.gems < gemAmount) {
+    showGameMessage(
+      "❌ НЕДОСТАТОЧНО КРИСТАЛЛОВ",
+      `Для этой продажи нужно ${gemAmount}💎.`,
+    );
+    return;
+  }
+
+  const totalCoins = gemAmount * coinsPerGem;
+
+  data.gems -= gemAmount;
+  data.coins += totalCoins;
+
+  updateUI();
+  updateJewelryMenu();
 }
 
 function showCompetitionEnemyCard() {
@@ -2894,10 +3071,17 @@ function loadGame() {
           ...matchHistory.records,
           ...(saveData.matchHistory.records || {}),
         },
+
+        lifeRecords: {
+          ...matchHistory.lifeRecords,
+          ...(saveData.matchHistory.lifeRecords || {}),
+        },
+
         last: {
           ...matchHistory.last,
           ...(saveData.matchHistory.last || {}),
         },
+
         total: {
           ...matchHistory.total,
           ...(saveData.matchHistory.total || {}),
@@ -3018,9 +3202,13 @@ function updateUI() {
     // Ветка зрителей
     if (n.k === "vStand" || n.k === "fan") canSee = data.lvls.viewer >= 1;
     if (n.k === "adCampaign") canSee = data.lvls.vStand >= 1;
+    if (n.k === "record") canSee = data.lvls.adCampaign >= 1;
     if (n.k === "attr" || n.k === "drink" || n.k === "fSec")
       canSee = data.lvls.fan >= 1;
     if (n.k === "vip") canSee = data.lvls.fSec >= 1;
+    if (n.k === "jewelry") {
+      canSee = (data.lvls.vip || 0) >= 1 || (data.lvls.competition || 0) >= 1;
+    }
 
     // Правая верхняя ветка от Реакции
     if (n.k === "reflex" || n.k === "delay" || n.k === "multiBall")
@@ -3085,6 +3273,7 @@ function updateUI() {
   updateLiveStats();
   updatePlayerCardStats();
   updateCompetitionButton();
+  updateJewelryButton();
 
   if (typeof updatePrestigeButton === "function") {
     updatePrestigeButton();
@@ -3306,6 +3495,15 @@ let matchHistory = {
     timeMs: 0,
     hits: 0,
   },
+
+  lifeRecords: {
+    xp: 0,
+    coins: 0,
+    gems: 0,
+    timeMs: 0,
+    hits: 0,
+  },
+
   last: {
     xp: 0,
     coins: 0,
@@ -3313,6 +3511,7 @@ let matchHistory = {
     timeMs: 0,
     hits: 0,
   },
+
   total: {
     xp: 0,
     coins: 0,
@@ -3664,15 +3863,21 @@ const NORMAL_FIELD_TYPES = {
     className: "field-snow",
     bg: "match/snow.png",
   },
+  autumn: {
+    key: "autumn",
+    className: "field-autumn",
+    bg: "match/autumn.png",
+  },
 };
 
 function rollNormalFieldType() {
   const r = Math.random() * 100;
 
-  if (r < 88) return "normal"; // 88%
-  if (r < 98) return "rain"; // 10%
-  if (r < 99) return "night"; // 1%
-  return "snow"; // 1%
+  if (r < 87) return "normal"; // 87%
+  if (r < 97) return "rain"; // 10%
+  if (r < 98) return "night"; // 1%
+  if (r < 99) return "snow"; // 1%
+  return "autumn"; // 1%
 }
 
 function clearNormalFieldClasses(gameScreen) {
@@ -3681,6 +3886,7 @@ function clearNormalFieldClasses(gameScreen) {
     "field-rain",
     "field-night",
     "field-snow",
+    "field-autumn",
   );
 }
 
@@ -3707,12 +3913,19 @@ function applyMatchModeView() {
   gameScreen.classList.add(field.className);
   gameScreen.style.backgroundImage = `url("${field.bg}")`;
 }
-
 function getReflexInterval() {
-  let interval = [0, 300, 250, 200, 150, 100][data.lvls.reflex || 0] || 0;
+  const reflexLevel = data.lvls.reflex || 0;
+  const hasSpeedDemon = (prestigeData?.skills?.speedDemon || 0) > 0;
 
-  // Демон скорости
-  if (interval > 0 && (prestigeData.skills.speedDemon || 0) > 0) {
+  let interval = [0, 300, 250, 200, 150, 100][reflexLevel] || 0;
+
+  // Демон скорости сам по себе даёт базовый автоклик 0.3 сек
+  if (reflexLevel === 0 && hasSpeedDemon) {
+    interval = 300;
+  }
+
+  // Если Рефлекс уже прокачан — Демон скорости ускоряет его в 2 раза
+  if (reflexLevel > 0 && hasSpeedDemon) {
     interval = Math.floor(interval / 2);
   }
 
@@ -3720,6 +3933,7 @@ function getReflexInterval() {
   if (interval > 0 && isSnowMatch()) {
     interval += 200;
   }
+
   if (
     interval > 0 &&
     typeof isCameroonRoarActive === "function" &&
@@ -3727,6 +3941,7 @@ function getReflexInterval() {
   ) {
     interval *= 2;
   }
+
   return interval;
 }
 
@@ -4183,7 +4398,8 @@ function applyTelekinesisHitToTarget(target) {
     sClick += p;
     sTeleXP += p;
 
-    let amount = 1;
+    const amount = Math.max(1, Math.round(1 + p * 0.05));
+
     sCoins += amount;
     sBallCoins += amount;
     sGoldCoins += amount;
@@ -4225,24 +4441,30 @@ function applyTelekinesisHitToTarget(target) {
     sTeleXP += p;
     sTeleComboXP += bonusXP;
 
-    let amount = 1;
+    const coinAmount = Math.max(1, Math.round(1 + p * 0.05));
+    const gemAmount = Math.max(1, Math.round(1 + p * 0.01));
 
-    sCoins += amount;
-    sBallCoins += amount;
-    sComboCoins += amount;
-    sTeleCoins += amount;
-    sTeleComboCoins += amount;
+    sCoins += coinAmount;
+    sBallCoins += coinAmount;
+    sComboCoins += coinAmount;
+    sTeleCoins += coinAmount;
+    sTeleComboCoins += coinAmount;
 
-    sGems += amount;
-    sBallGems += amount;
-    sComboGems += amount;
-    sTeleGems += amount;
-    sTeleComboGems += amount;
+    sGems += gemAmount;
+    sBallGems += gemAmount;
+    sComboGems += gemAmount;
+    sTeleGems += gemAmount;
+    sTeleComboGems += gemAmount;
 
     spawnFloatingText("+" + p, targetPos.x + 10, targetPos.y + 5, "xp");
-    spawnFloatingText("+" + amount, targetPos.x + 28, targetPos.y - 6, "coin");
     spawnFloatingText(
-      "+" + amount + " 💎",
+      "+" + coinAmount,
+      targetPos.x + 28,
+      targetPos.y - 6,
+      "coin",
+    );
+    spawnFloatingText(
+      "+" + gemAmount + " 💎",
       targetPos.x + 40,
       targetPos.y + 14,
       "xp",
@@ -4251,12 +4473,11 @@ function applyTelekinesisHitToTarget(target) {
     refreshMatchRuntimeUI();
     return;
   }
-
   if (ballType === "crystal") {
     sClick += p;
     sTeleXP += p;
 
-    let amount = 1;
+    const amount = Math.max(1, Math.round(1 + p * 0.01));
 
     sGems += amount;
     sBallGems += amount;
@@ -4462,11 +4683,13 @@ function applyShockwaveHitToTarget(target) {
     sClick += p;
     sTeleXP += p;
 
-    let amount = 1;
+    const amount = Math.max(1, Math.round(1 + p * 0.05));
+
     sCoins += amount;
     sBallCoins += amount;
     sGoldCoins += amount;
     sTeleCoins += amount;
+    sTeleGoldCoins += amount;
 
     if (targetPos) {
       spawnFloatingText("+" + p, targetPos.x + 10, targetPos.y + 5, "xp");
@@ -4477,6 +4700,7 @@ function applyShockwaveHitToTarget(target) {
         "coin",
       );
     }
+
     return;
   }
 
@@ -4505,33 +4729,39 @@ function applyShockwaveHitToTarget(target) {
     sBallXP += bonusXP;
     sComboXP += bonusXP;
     sTeleXP += p;
+    sTeleComboXP += bonusXP;
 
-    let amount = 1;
-    sCoins += amount;
-    sBallCoins += amount;
-    sComboCoins += amount;
-    sTeleCoins += amount;
+    const coinAmount = Math.max(1, Math.round(1 + p * 0.05));
+    const gemAmount = Math.max(1, Math.round(1 + p * 0.01));
 
-    sGems += amount;
-    sBallGems += amount;
-    sComboGems += amount;
-    sTeleGems += amount;
+    sCoins += coinAmount;
+    sBallCoins += coinAmount;
+    sComboCoins += coinAmount;
+    sTeleCoins += coinAmount;
+    sTeleComboCoins += coinAmount;
+
+    sGems += gemAmount;
+    sBallGems += gemAmount;
+    sComboGems += gemAmount;
+    sTeleGems += gemAmount;
+    sTeleComboGems += gemAmount;
 
     if (targetPos) {
       spawnFloatingText("+" + p, targetPos.x + 10, targetPos.y + 5, "xp");
       spawnFloatingText(
-        "+" + amount,
+        "+" + coinAmount,
         targetPos.x + 28,
         targetPos.y - 6,
         "coin",
       );
       spawnFloatingText(
-        "+" + amount + " 💎",
+        "+" + gemAmount + " 💎",
         targetPos.x + 40,
         targetPos.y + 14,
         "xp",
       );
     }
+
     return;
   }
 
@@ -4539,11 +4769,13 @@ function applyShockwaveHitToTarget(target) {
     sClick += p;
     sTeleXP += p;
 
-    let amount = 1;
+    const amount = Math.max(1, Math.round(1 + p * 0.01));
+
     sGems += amount;
     sBallGems += amount;
     sCrystalGems += amount;
     sTeleGems += amount;
+    sTeleCrystalGems += amount;
 
     if (targetPos) {
       spawnFloatingText("+" + p, targetPos.x + 10, targetPos.y + 5, "xp");
@@ -4554,6 +4786,7 @@ function applyShockwaveHitToTarget(target) {
         "xp",
       );
     }
+
     return;
   }
 
@@ -4859,7 +5092,7 @@ function startGame(mode = "normal") {
 
   const mainBall = document.getElementById("ball");
   if (mainBall) {
-    applyBallType(mainBall, "normal");
+    applyBallType(mainBall, isAutumnMatch() ? "gold" : "normal");
   }
 
   updateMultiBalls();
@@ -5147,8 +5380,10 @@ function handleKick(event) {
       ? prestigeData?.skills?.playerCritPower || 0
       : 0;
 
-  const rainCritBonus = isRainMatch() ? 2 : 0;
-  const critMultiplier = 3 + prestigeCritPower + rainCritBonus;
+  const baseCritMultiplier = 3 + prestigeCritPower;
+  const critMultiplier = isRainMatch()
+    ? baseCritMultiplier * 2
+    : baseCritMultiplier;
 
   if (critChance > 0 && Math.random() * 100 < critChance) {
     p *= critMultiplier;
@@ -5476,7 +5711,8 @@ function handleKick(event) {
 
   if (ballType === "gold") {
     playSound(sounds.gold, 0.25);
-    let amount = isSpecialCrit ? 3 : 1;
+
+    const amount = Math.max(1, Math.round(1 + p * 0.05));
 
     sCoins += amount;
     sBallCoins += amount;
@@ -5514,36 +5750,37 @@ function handleKick(event) {
 
     if (isCrit) isSuperCrit = true;
 
-    let amount = isSpecialCrit ? 3 : 1;
+    const coinAmount = Math.max(1, Math.round(1 + p * 0.05));
+    const gemAmount = Math.max(1, Math.round(1 + p * 0.01));
 
-    sCoins += amount;
-    sBallCoins += amount;
-    sComboCoins += amount;
+    sCoins += coinAmount;
+    sBallCoins += coinAmount;
+    sComboCoins += coinAmount;
 
-    sGems += amount;
-    sBallGems += amount;
-    sComboGems += amount;
+    sGems += gemAmount;
+    sBallGems += gemAmount;
+    sComboGems += gemAmount;
 
     spawnFloatingText("COMBO!", event.clientX + 35, event.clientY - 35, "crit");
 
     spawnFloatingText(
-      "+" + amount,
+      "+" + coinAmount,
       event.clientX + 65,
       event.clientY - 10,
       "coin",
     );
 
     spawnFloatingText(
-      "+" + amount + " 💎",
+      "+" + gemAmount + " 💎",
       event.clientX + 90,
       event.clientY + 10,
       "xp",
     );
   }
-
   if (ballType === "crystal") {
     playSound(sounds.crystal, 0.25);
-    let amount = isSpecialCrit ? 3 : 1;
+
+    const amount = Math.max(1, Math.round(1 + p * 0.01));
 
     sGems += amount;
     sBallGems += amount;
@@ -5766,8 +6003,8 @@ function stopGame() {
     vipChance = [0, 30, 60, 90][data.lvls.vip || 0] || 0;
 
     if (Math.random() * 100 < vipChance) {
-      sGems += 3;
-      sVipGems += 3;
+      sGems += 5;
+      sVipGems += 5;
     }
   }
 
@@ -5789,7 +6026,7 @@ function stopGame() {
   }
 
   for (let i = 0; i < fC; i++) {
-    if (Math.random() * 100 < aCh) attrMoney += 3;
+    if (Math.random() * 100 < aCh) attrMoney += 5;
   }
 
   let cExtra = drinkMoney + attrMoney;
@@ -5983,6 +6220,16 @@ function stopGame() {
 
   let totalMatchCoins = sCoins + cBase + cExtra;
   let totalMatchGems = sGems;
+  let recordBonusCoins = 0;
+
+  const oldXpRecord = matchHistory.lifeRecords.xp || 0;
+  const isNewXpRecord = totalXP > oldXpRecord;
+
+  if (isNewXpRecord && (data.lvls.record || 0) > 0) {
+    recordBonusCoins = [0, 20, 40, 60][data.lvls.record || 0] || 0;
+
+    totalMatchCoins += recordBonusCoins;
+  }
 
   const pureClickXP = Math.max(0, sClick - sTeleXP);
   const pureFireXP = Math.max(0, sFireXP - sTeleFireXP);
@@ -6026,6 +6273,7 @@ function stopGame() {
   setVal("res-coin-drink", drinkMoney);
   setVal("res-coin-attr", attrMoney);
   setVal("res-coin-dog", Math.floor(sDogCoins));
+  setVal("res-coin-record", recordBonusCoins);
 
   setVal("res-gem-crystal", Math.floor(pureCrystalGems));
   setVal("res-gem-combo", Math.floor(pureComboGems));
@@ -6067,6 +6315,10 @@ function stopGame() {
   if (sRewardCoins > 0) {
     showEl("summary-coin-col", "block");
     showEl("row-res-reward");
+  }
+  if (recordBonusCoins > 0) {
+    showEl("summary-coin-col", "block");
+    showEl("row-res-record");
   }
 
   if (sDogCoins > 0) {
@@ -6115,7 +6367,17 @@ function stopGame() {
   if (totalMatchCoins > 0) showEl("row-res-total-coin");
 
   const overlay = document.getElementById("summary-overlay");
+  const closeSummaryButton = document.getElementById("close-summary-btn");
+
   if (overlay) overlay.style.display = "flex";
+
+  if (closeSummaryButton) {
+    closeSummaryButton.disabled = true;
+
+    setTimeout(() => {
+      closeSummaryButton.disabled = false;
+    }, 1000);
+  }
 
   registerMatchResults();
 }
@@ -6153,6 +6415,7 @@ function closeSummary() {
     "row-res-tele-gem",
     "row-res-dog-coin",
     "row-res-gem-dog",
+    "row-res-record",
   ];
   idsToHide.forEach((id) => {
     let el = document.getElementById(id);
@@ -6196,9 +6459,9 @@ function getExpectedIncome() {
   const dCh = [0, 30, 60, 90][data.lvls.drink || 0] || 0;
   const expectedDrinks = expectedPeople * (dCh / 100);
 
-  // Атрибутика: только фанаты, по 3 монеты
+  // Атрибутика по 5 монет
   const aCh = [0, 10, 20, 30][data.lvls.attr || 0] || 0;
-  const expectedAttr = fans * (aCh / 100) * 3;
+  const expectedAttr = fans * (aCh / 100) * 5;
 
   return Math.round(expectedTickets + expectedDrinks + expectedAttr);
 }
@@ -6456,6 +6719,7 @@ function initAdminControls() {
 
 function initMainButtons() {
   const startMatchButton = document.getElementById("start-match-btn");
+
   if (startMatchButton) {
     startMatchButton.addEventListener("click", () => startGame("normal"));
   }
@@ -6463,17 +6727,50 @@ function initMainButtons() {
   const startCompetitionButton = document.getElementById(
     "start-competition-btn",
   );
+
   if (startCompetitionButton) {
     startCompetitionButton.addEventListener("click", openCompetitionMenu);
   }
+
+  const openJewelryButton = document.getElementById("open-jewelry-btn");
+
+  if (openJewelryButton) {
+    openJewelryButton.addEventListener("click", openJewelryMenu);
+  }
+
+  const closeJewelryButton = document.getElementById("close-jewelry-btn");
+
+  if (closeJewelryButton) {
+    closeJewelryButton.addEventListener("click", closeJewelryMenu);
+  }
+
+  document.querySelectorAll(".jewelry-buy-btn").forEach((button) => {
+    button.addEventListener("click", () => {
+      const amount = button.dataset.amount;
+
+      buyJewelryGems(amount === "max" ? "max" : Number(amount));
+    });
+  });
+
+  document.querySelectorAll(".jewelry-sell-btn").forEach((button) => {
+    button.addEventListener("click", () => {
+      const amount = button.dataset.amount;
+
+      sellJewelryGems(amount === "max" ? "max" : Number(amount));
+    });
+  });
+
   const closeSummaryButton = document.getElementById("close-summary-btn");
+
   if (closeSummaryButton) {
     closeSummaryButton.addEventListener("click", closeSummary);
   }
 }
+
 const restartCompetitionBtn = document.getElementById(
   "restart-competition-btn",
 );
+
 const saveGameBtn = document.getElementById("save-game-btn");
 
 if (saveGameBtn) {

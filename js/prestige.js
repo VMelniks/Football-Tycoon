@@ -378,6 +378,8 @@ function createFreshDataAfterPrestige(keepGems) {
       freezing: 0,
       freezingTime: 0,
       competition: 0,
+      jewelry: 0,
+      record: 0,
     },
 
     max: { ...data.max },
@@ -428,6 +430,8 @@ function createFreshDataAfterPrestige(keepGems) {
       freezing: 100,
       freezingTime: 200,
       competition: 1000,
+      jewelry: 500,
+      record: 100,
     },
   };
 }
@@ -453,6 +457,18 @@ function resetProgressForPrestige() {
   const keepGems = data.gems || 0;
 
   data = createFreshDataAfterPrestige(keepGems);
+
+  matchHistory.lifeRecords = {
+    xp: 0,
+    coins: 0,
+    gems: 0,
+    timeMs: 0,
+    hits: 0,
+  };
+
+  if (typeof updateMenuHistoryPanels === "function") {
+    updateMenuHistoryPanels();
+  }
 
   prestigeData.totalPrestiges++;
 
