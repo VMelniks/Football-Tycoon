@@ -747,6 +747,8 @@ function updateExtraBallLife() {
     if (spawnTime <= 0 || lifeTime <= 0) return;
 
     if (now - spawnTime >= lifeTime) {
+      tryDefectiveBallExplosion(ball);
+
       ball.style.display = "none";
       ball.dataset.spawnTime = "0";
       ball.dataset.lifeTime = "0";
@@ -780,10 +782,14 @@ function scheduleMainBallMove(delay = null) {
   mainBallMoveStartedAt = Date.now();
 
   mainBallMoveTimeout = setTimeout(() => {
+    const mainBall = document.getElementById("ball");
+
+    tryDefectiveBallExplosion(mainBall);
+
     moveAllBallsToRandomPositions();
 
     if (isSnowMatch()) {
-      applySnowFreezeVisual(document.getElementById("ball"));
+      applySnowFreezeVisual(mainBall);
     }
 
     scheduleMainBallMove(getMainBallLifeTime());
@@ -1511,6 +1517,18 @@ function spawnFloatingText(text, x, y, type = "xp") {
     0 0 16px #7a00ff,
     0 0 24px #4b0082
   `;
+  } else if (type === "technique") {
+    el.className = "floating-xp";
+    el.innerHTML = text;
+
+    el.style.color = "#ffd700";
+    el.style.fontSize = "0.85rem";
+    el.style.fontWeight = "bold";
+
+    el.style.textShadow = `
+    0 0 4px #ffd700,
+    0 0 8px #ff8c00
+  `;
   } else if (type === "ultraSmall") {
     el.className = "floating-xp";
     el.innerHTML = text;
@@ -1652,6 +1670,7 @@ let data = {
     fan: 0,
     attr: 0,
     drink: 0,
+    techniqueShot: 0,
     midas: 0,
     midasCrit: 0,
     reward: 0,
@@ -1659,7 +1678,7 @@ let data = {
     specialCrit: 0,
     equip: 0,
     timeCoin: 0,
-    coach: 0,
+    footballSchool: 0,
     reaction: 0,
     multiBall: 0,
     goldBall: 0,
@@ -1677,6 +1696,7 @@ let data = {
     telekinesis: 0,
     clone: 0,
     shockwave: 0,
+    defectiveBalls: 0,
     freezing: 0,
     freezingTime: 0,
     competition: 0,
@@ -1701,6 +1721,7 @@ let data = {
     fan: 5,
     attr: 3,
     drink: 3,
+    techniqueShot: 3,
     midas: 3,
     midasCrit: 3,
     reward: 5,
@@ -1708,7 +1729,7 @@ let data = {
     specialCrit: 3,
     equip: 3,
     timeCoin: 3,
-    coach: 3,
+    footballSchool: 1,
     reaction: 3,
     multiBall: 3,
     goldBall: 3,
@@ -1726,6 +1747,7 @@ let data = {
     telekinesis: 3,
     clone: 3,
     shockwave: 3,
+    defectiveBalls: 3,
     freezing: 3,
     freezingTime: 3,
     competition: 1,
@@ -1750,7 +1772,8 @@ let data = {
     fSec: 100,
     fan: 1200,
     attr: 50,
-    drink: 60,
+    drink: 50,
+    techniqueShot: 80,
     midas: 50,
     midasCrit: 200,
     reward: 50,
@@ -1758,14 +1781,14 @@ let data = {
     specialCrit: 50,
     equip: 10,
     timeCoin: 300,
-    coach: 30,
-    reaction: 200,
+    footballSchool: 100,
+    reaction: 100,
     multiBall: 300,
     goldBall: 50,
     fireBall: 600,
     specialReaction: 2000,
     crystalBall: 100,
-    synergy: 150,
+    synergy: 180,
     piggy: 50,
     surprisePiggy: 100,
     personalReward: 150,
@@ -1776,6 +1799,7 @@ let data = {
     telekinesis: 200,
     clone: 400,
     shockwave: 100,
+    defectiveBalls: 150,
     freezing: 100,
     freezingTime: 200,
     competition: 1000,
@@ -1809,14 +1833,14 @@ const nodeData = [
     k: "footy",
     name: "ФУТБОЛИСТ",
     cur: "coin",
-    desc: "Автоматически приносит +4🔹 каждые 1с",
+    desc: "Каждый футболист приносит 5🔹 + 10% от силы твоего удара каждую секунду",
   },
   {
-    id: "node-coach",
-    k: "coach",
-    name: "ТРЕНЕР",
+    id: "node-footballSchool",
+    k: "footballSchool",
+    name: "ФУТБОЛЬНАЯ ШКОЛА",
     cur: "coin",
-    desc: "Каждый футболист получает +2/4/6🔹 к силе удара",
+    desc: "Позволяет изучать новые футбольные навыки и улучшать их",
   },
   {
     id: "node-fCrit",
@@ -1894,6 +1918,13 @@ const nodeData = [
     name: "ТРИБУНА",
     cur: "coin",
     desc: "Зрителей +10",
+  },
+  {
+    id: "node-techniqueShot",
+    k: "techniqueShot",
+    name: "УДАР НА ТЕХНИКУ",
+    cur: "coin",
+    desc: "Шанс 5, 10, 15%, что зритель выбежит и пробьёт 'на технику' с силой х20 от силы игрока",
   },
   {
     id: "node-adCampaign",
@@ -2024,7 +2055,13 @@ const nodeData = [
     cur: "coin",
     desc: "После того, как свинка-копилка разбита, появляется волна, которая ударяет по соседним объектам, нанося им урон",
   },
-
+  {
+    id: "node-defectiveBalls",
+    k: "defectiveBalls",
+    name: "БРАКОВАННЫЕ МЯЧИ",
+    cur: "coin",
+    desc: "Обычные мячи при окончании времени жизни имеют 15% / 30% / 45% шанс взорваться и вызвать Взрывную волну",
+  },
   {
     id: "node-specialReaction",
     k: "specialReaction",
@@ -2264,8 +2301,7 @@ function calculateOVR() {
   const equipBonuses = [0, 2, 5, 10];
   const clickPower = (lvls.click || 0) + (equipBonuses[lvls.equip || 0] || 0);
 
-  const coachBonusPerPlayer = (lvls.coach || 0) * 2;
-  const footyTotal = (lvls.footy || 0) * (4 + coachBonusPerPlayer);
+  const footyTotal = getFootballerPowerPerSecond();
 
   const friendBase = lvls.friend || 0;
   const friendBonus = (lvls.friendPower || 0) * 2;
@@ -2411,8 +2447,7 @@ function updatePlayerCardStats() {
   const critVal =
     (lvls.crit || 0) * 2 + (prestigeSkills.playerCritChance || 0) * 2;
 
-  const coachBonusPerPlayer = (lvls.coach || 0) * 2;
-  const footyTotal = (lvls.footy || 0) * (4 + coachBonusPerPlayer);
+  const footyTotal = getFootballerPowerPerSecond();
 
   const dogPowerBonuses = [0, 3, 7, 12];
   const prestigeDogPower = dogPowerBonuses[prestigeSkills.dogPower || 0] || 0;
@@ -3205,6 +3240,7 @@ function updateUI() {
     if (n.k === "record") canSee = data.lvls.adCampaign >= 1;
     if (n.k === "attr" || n.k === "drink" || n.k === "fSec")
       canSee = data.lvls.fan >= 1;
+    if (n.k === "techniqueShot") canSee = data.lvls.drink >= 1;
     if (n.k === "vip") canSee = data.lvls.fSec >= 1;
     if (n.k === "jewelry") {
       canSee = (data.lvls.vip || 0) >= 1 || (data.lvls.competition || 0) >= 1;
@@ -3221,10 +3257,12 @@ function updateUI() {
     if (n.k === "crystalTime") canSee = data.lvls.time >= 1;
 
     // Правая ветка профессии
-    if (n.k === "reward" || n.k === "coach") canSee = data.lvls.footy >= 1;
+    if (n.k === "reward" || n.k === "footballSchool")
+      canSee = data.lvls.footy >= 1;
 
     if (n.k === "bigReward" || n.k === "personalReward")
       canSee = data.lvls.reward >= 1;
+    if (n.k === "defectiveBalls") canSee = data.lvls.shockwave >= 1;
     if (n.k === "telekinesis") canSee = data.lvls.reflex >= 1;
     if (n.k === "clone") canSee = data.lvls.telekinesis >= 1;
     if (n.k === "competition") canSee = data.lvls.personalReward >= 1;
@@ -3476,6 +3514,37 @@ let sTeleComboCoins = 0;
 
 let sTeleCrystalGems = 0;
 let sTeleComboGems = 0;
+
+let techniqueShotInterval = null;
+let techniqueShotActive = false;
+let sTechniqueXP = 0;
+const techniqueShotSpawnPoints = [
+  { x: 0.22, y: 0.45, scale: 0.8 },
+  { x: 0.29, y: 0.45, scale: 0.8 },
+  { x: 0.72, y: 0.45, scale: 0.8 },
+  { x: 0.81, y: 0.45, scale: 0.8 },
+
+  { x: 0.12, y: 0.55, scale: 0.95 },
+  { x: 0.22, y: 0.55, scale: 0.95 },
+
+  { x: 0.08, y: 0.65, scale: 1.05 },
+  { x: 0.15, y: 0.65, scale: 1.05 },
+  { x: 0.25, y: 0.65, scale: 1.05 },
+  { x: 0.8, y: 0.65, scale: 1.05 },
+];
+
+let sShockXP = 0;
+let sShockCoins = 0;
+let sShockGems = 0;
+
+let sShockFireXP = 0;
+let sShockComboXP = 0;
+
+let sShockGoldCoins = 0;
+let sShockComboCoins = 0;
+
+let sShockCrystalGems = 0;
+let sShockComboGems = 0;
 
 let extraBalls = [];
 let clonePiggies = [];
@@ -3948,7 +4017,8 @@ function getReflexInterval() {
 function refreshMatchRuntimeUI() {
   const scoreEl = document.getElementById("current-score");
   const coinsEl = document.getElementById("game-coins");
-  let totalNow = sClick + sFriend + sFooty;
+
+  let totalNow = sClick + sFriend + sFooty + sTechniqueXP;
 
   if (scoreEl) scoreEl.innerText = Math.floor(totalNow);
   if (coinsEl) coinsEl.innerText = `🟡 ${Math.floor(sCoins)}`;
@@ -4051,6 +4121,105 @@ function getPlayerKickPower() {
     data.lvls.click + (equipBonuses[data.lvls.equip] || 0) + prestigePlayerPower
   );
 }
+function getFootballerPowerPerSecond() {
+  const footballers = data.lvls.footy || 0;
+
+  if (footballers <= 0) return 0;
+
+  const playerPower =
+    typeof getPlayerKickPower === "function"
+      ? getPlayerKickPower()
+      : data.lvls.click || 0;
+
+  const baseXpPerFootballer = 5;
+  const playerPowerShare = 0.1;
+
+  const xpPerFootballer = baseXpPerFootballer + playerPower * playerPowerShare;
+
+  return footballers * xpPerFootballer;
+}
+
+function startTechniqueShotEvent() {
+  stopTechniqueShotEvent();
+
+  techniqueShotInterval = setInterval(() => {
+    if (currentMode !== "normal") return;
+    if (isNightMatch()) return;
+
+    if (!document.getElementById("game-screen")?.classList.contains("active")) {
+      return;
+    }
+
+    const lvl = data?.lvls?.techniqueShot || 0;
+    if (lvl <= 0) return;
+    if (techniqueShotActive) return;
+
+    const chances = [0, 5, 10, 15];
+    const chance = chances[lvl] || 0;
+
+    if (Math.random() * 100 >= chance) return;
+
+    triggerTechniqueShot();
+  }, 1000);
+}
+
+function stopTechniqueShotEvent() {
+  if (techniqueShotInterval) {
+    clearInterval(techniqueShotInterval);
+    techniqueShotInterval = null;
+  }
+
+  techniqueShotActive = false;
+
+  document
+    .querySelectorAll(".technique-shot-wrap")
+    .forEach((el) => el.remove());
+}
+
+function triggerTechniqueShot() {
+  const field = document.getElementById("game-screen");
+  if (!field) return;
+
+  techniqueShotActive = true;
+
+  const point =
+    techniqueShotSpawnPoints[
+      Math.floor(Math.random() * techniqueShotSpawnPoints.length)
+    ];
+
+  const wrap = document.createElement("div");
+  wrap.className = "technique-shot-wrap";
+  wrap.style.left = point.x * 100 + "%";
+  wrap.style.top = point.y * 100 + "%";
+  wrap.style.transform = `translate(-50%, -50%) scale(${point.scale || 1})`;
+
+  wrap.innerHTML = `
+    <div class="technique-shot-runner"></div>
+    <div class="technique-shot-ball"></div>
+  `;
+
+  field.appendChild(wrap);
+
+  const rect = field.getBoundingClientRect();
+  const fx = rect.left + rect.width * point.x;
+  const fy = rect.top + rect.height * point.y;
+
+  spawnFloatingText("УДАР НА ТЕХНИКУ!", fx + 45, fy - 30, "technique");
+
+  setTimeout(() => {
+    const techniqueXP = getPlayerKickPower() * 20;
+    sTechniqueXP += techniqueXP;
+
+    refreshMatchRuntimeUI();
+
+    spawnFloatingText("+" + techniqueXP, fx + 80, fy - 60, "xp");
+  }, 420);
+
+  setTimeout(() => {
+    wrap.remove();
+    techniqueShotActive = false;
+  }, 950);
+}
 
 // =================================
 // FREEZING, TELEKINESIS, SHOCKWAVE и связанные механики
@@ -4137,6 +4306,32 @@ function applyFreezing(target, event) {
 function getShockwaveHits() {
   return [0, 1, 2, 3][data.lvls.shockwave || 0] || 0;
 }
+function getDefectiveBallExplosionChance() {
+  return [0, 0.15, 0.3, 0.45][data.lvls.defectiveBalls || 0] || 0;
+}
+function tryDefectiveBallExplosion(ball) {
+  if (!ball) return false;
+
+  // Только обычные матчи
+  if (currentMode === "competition") return false;
+
+  // Только обычный мяч
+  const ballType = ball.dataset.ballType || "normal";
+  if (ballType !== "normal") return false;
+
+  const chance = getDefectiveBallExplosionChance();
+  if (chance <= 0) return false;
+
+  if (Math.random() >= chance) return false;
+
+  const pos = getElementCenter(ball);
+  if (!pos) return false;
+
+  startShockwave(pos.x, pos.y, ball);
+
+  return true;
+}
+
 function clearShockwaveTimeouts() {
   shockwaveTimeouts.forEach((id) => clearTimeout(id));
   shockwaveTimeouts = [];
@@ -4681,18 +4876,20 @@ function applyShockwaveHitToTarget(target) {
 
   if (ballType === "gold") {
     sClick += p;
-    sTeleXP += p;
+    sShockXP += p;
 
     const amount = Math.max(1, Math.round(1 + p * 0.05));
 
     sCoins += amount;
     sBallCoins += amount;
     sGoldCoins += amount;
-    sTeleCoins += amount;
-    sTeleGoldCoins += amount;
+
+    sShockCoins += amount;
+    sShockGoldCoins += amount;
 
     if (targetPos) {
       spawnFloatingText("+" + p, targetPos.x + 10, targetPos.y + 5, "xp");
+
       spawnFloatingText(
         "+" + amount,
         targetPos.x + 28,
@@ -4706,30 +4903,38 @@ function applyShockwaveHitToTarget(target) {
 
   if (ballType === "fire") {
     const oldP = p;
+
     p *= 3;
+
     const bonusXP = p - oldP;
 
     sClick += p;
     sBallXP += bonusXP;
     sFireXP += bonusXP;
-    sTeleXP += p;
+
+    sShockXP += p;
+    sShockFireXP += bonusXP;
 
     if (targetPos) {
       spawnFloatingText("+" + p, targetPos.x + 10, targetPos.y + 5, "xp");
     }
+
     return;
   }
 
   if (ballType === "combo") {
     const oldP = p;
+
     p *= 3;
+
     const bonusXP = p - oldP;
 
     sClick += p;
     sBallXP += bonusXP;
     sComboXP += bonusXP;
-    sTeleXP += p;
-    sTeleComboXP += bonusXP;
+
+    sShockXP += p;
+    sShockComboXP += bonusXP;
 
     const coinAmount = Math.max(1, Math.round(1 + p * 0.05));
     const gemAmount = Math.max(1, Math.round(1 + p * 0.01));
@@ -4737,23 +4942,27 @@ function applyShockwaveHitToTarget(target) {
     sCoins += coinAmount;
     sBallCoins += coinAmount;
     sComboCoins += coinAmount;
-    sTeleCoins += coinAmount;
-    sTeleComboCoins += coinAmount;
+
+    sShockCoins += coinAmount;
+    sShockComboCoins += coinAmount;
 
     sGems += gemAmount;
     sBallGems += gemAmount;
     sComboGems += gemAmount;
-    sTeleGems += gemAmount;
-    sTeleComboGems += gemAmount;
+
+    sShockGems += gemAmount;
+    sShockComboGems += gemAmount;
 
     if (targetPos) {
       spawnFloatingText("+" + p, targetPos.x + 10, targetPos.y + 5, "xp");
+
       spawnFloatingText(
         "+" + coinAmount,
         targetPos.x + 28,
         targetPos.y - 6,
         "coin",
       );
+
       spawnFloatingText(
         "+" + gemAmount + " 💎",
         targetPos.x + 40,
@@ -4767,18 +4976,20 @@ function applyShockwaveHitToTarget(target) {
 
   if (ballType === "crystal") {
     sClick += p;
-    sTeleXP += p;
+    sShockXP += p;
 
     const amount = Math.max(1, Math.round(1 + p * 0.01));
 
     sGems += amount;
     sBallGems += amount;
     sCrystalGems += amount;
-    sTeleGems += amount;
-    sTeleCrystalGems += amount;
+
+    sShockGems += amount;
+    sShockCrystalGems += amount;
 
     if (targetPos) {
       spawnFloatingText("+" + p, targetPos.x + 10, targetPos.y + 5, "xp");
+
       spawnFloatingText(
         "+" + amount + " 💎",
         targetPos.x + 28,
@@ -4790,7 +5001,9 @@ function applyShockwaveHitToTarget(target) {
     return;
   }
 
+  // Обычный мяч
   sClick += p;
+  sShockXP += p;
 
   if (targetPos) {
     spawnFloatingText("+" + p, targetPos.x + 10, targetPos.y + 5, "xp");
@@ -4916,6 +5129,12 @@ function startGame(mode = "normal") {
   } else {
     currentNormalFieldType = "normal";
   }
+  sTechniqueXP = 0;
+  if (mode === "normal") {
+    startTechniqueShotEvent();
+  } else {
+    stopTechniqueShotEvent();
+  }
 
   if (mode === "competition") {
     playCompetitionMusic(data.competition.selected || "spain");
@@ -4972,6 +5191,15 @@ function startGame(mode = "normal") {
     sTeleComboCoins =
     sTeleCrystalGems =
     sTeleComboGems =
+    sShockXP =
+    sShockCoins =
+    sShockGems =
+    sShockFireXP =
+    sShockComboXP =
+    sShockGoldCoins =
+    sShockComboCoins =
+    sShockCrystalGems =
+    sShockComboGems =
       0;
 
   piggyState.active = false;
@@ -5161,10 +5389,8 @@ function startGame(mode = "normal") {
 
   aInt = setInterval(() => {
     // 1. Футболисты
-    let coachBonusPerPlayer = (data.lvls.coach || 0) * 2;
-    let footyPowerPerSecond =
-      (data.lvls.footy || 0) * (4 + coachBonusPerPlayer);
-    let footyPowerPerTick = footyPowerPerSecond / 10;
+    const footyPowerPerSecond = getFootballerPowerPerSecond();
+    const footyPowerPerTick = footyPowerPerSecond / 10;
     sFooty += footyPowerPerTick;
 
     // 2. Друг (удар ровно 1 раз в секунду)
@@ -5317,7 +5543,7 @@ function startGame(mode = "normal") {
       return data.lvls.friendSpeed || 0; // 1 уровень = -1 тик
     }
 
-    let totalNow = sClick + sFriend + sFooty;
+    let totalNow = sClick + sFriend + sFooty + sTechniqueXP;
     document.getElementById("current-score").innerText = Math.floor(totalNow);
   }, 100);
   updateCompetitionHud();
@@ -5463,7 +5689,7 @@ function handleKick(event) {
 
     const scoreEl = document.getElementById("current-score");
     const coinsEl = document.getElementById("game-coins");
-    let totalNow = sClick + sFriend + sFooty;
+    let totalNow = sClick + sFriend + sFooty + sTechniqueXP;
 
     if (scoreEl) scoreEl.innerText = Math.floor(totalNow);
     if (coinsEl) coinsEl.innerText = `🟡 ${Math.floor(sCoins)}`;
@@ -5610,7 +5836,7 @@ function handleKick(event) {
 
     const scoreEl = document.getElementById("current-score");
     const coinsEl = document.getElementById("game-coins");
-    let totalNow = sClick + sFriend + sFooty;
+    let totalNow = sClick + sFriend + sFooty + sTechniqueXP;
 
     if (scoreEl) scoreEl.innerText = Math.floor(totalNow);
     if (coinsEl) coinsEl.innerText = `🟡 ${Math.floor(sCoins)}`;
@@ -5851,7 +6077,7 @@ function handleKick(event) {
     sClick += p;
   }
 
-  let totalNow = sClick + sFriend + sFooty;
+  let totalNow = sClick + sFriend + sFooty + sTechniqueXP;
 
   if (totalNow < 0) totalNow = 0;
 
@@ -5942,6 +6168,7 @@ function stopGame() {
   stopReflex();
   clearShockwaveTimeouts();
   clearInterval(cloneLifeInterval);
+  stopTechniqueShotEvent();
 
   clonePiggies.forEach((p) => p.remove());
   cloneSurprisePiggies.forEach((p) => p.remove());
@@ -6044,7 +6271,7 @@ function stopGame() {
     }
   }
 
-  let totalXP = Math.floor(sClick + sFriend + sFooty + sBallXP);
+  let totalXP = Math.floor(sClick + sFriend + sFooty + sBallXP + sTechniqueXP);
 
   if (currentMode === "competition") {
     const playerScore = Math.floor(getCompetitionPlayerScore());
@@ -6231,16 +6458,31 @@ function stopGame() {
     totalMatchCoins += recordBonusCoins;
   }
 
-  const pureClickXP = Math.max(0, sClick - sTeleXP);
-  const pureFireXP = Math.max(0, sFireXP - sTeleFireXP);
-  const pureComboXP = Math.max(0, sComboXP - sTeleComboXP);
+  const pureClickXP = Math.max(0, sClick - sTeleXP - sShockXP);
 
-  const pureGoldCoins = Math.max(0, sGoldCoins - sTeleGoldCoins);
-  const pureComboCoins = Math.max(0, sComboCoins - sTeleComboCoins);
+  const pureFireXP = Math.max(0, sFireXP - sTeleFireXP - sShockFireXP);
 
-  const pureCrystalGems = Math.max(0, sCrystalGems - sTeleCrystalGems);
+  const pureComboXP = Math.max(0, sComboXP - sTeleComboXP - sShockComboXP);
 
-  const pureComboGems = Math.max(0, sComboGems - sTeleComboGems);
+  const pureGoldCoins = Math.max(
+    0,
+    sGoldCoins - sTeleGoldCoins - sShockGoldCoins,
+  );
+
+  const pureComboCoins = Math.max(
+    0,
+    sComboCoins - sTeleComboCoins - sShockComboCoins,
+  );
+
+  const pureCrystalGems = Math.max(
+    0,
+    sCrystalGems - sTeleCrystalGems - sShockCrystalGems,
+  );
+
+  const pureComboGems = Math.max(
+    0,
+    sComboGems - sTeleComboGems - sShockComboGems,
+  );
 
   const setVal = (id, val) => {
     const el = document.getElementById(id);
@@ -6260,6 +6502,8 @@ function stopGame() {
   setVal("res-xp-fire", Math.floor(pureFireXP));
   setVal("res-xp-combo", Math.floor(pureComboXP));
   setVal("res-xp-tele", Math.floor(sTeleXP));
+  setVal("res-xp-shock", Math.floor(sShockXP));
+  setVal("res-xp-technique", Math.floor(sTechniqueXP));
 
   setVal("res-coin-total", totalMatchCoins);
   setVal("res-coin-base", cBase);
@@ -6270,6 +6514,7 @@ function stopGame() {
   setVal("res-coin-combo", Math.floor(pureComboCoins));
   setVal("res-coin-piggy", Math.floor(sPiggyCoins));
   setVal("res-coin-tele", Math.floor(sTeleCoins));
+  setVal("res-coin-shock", Math.floor(sShockCoins));
   setVal("res-coin-drink", drinkMoney);
   setVal("res-coin-attr", attrMoney);
   setVal("res-coin-dog", Math.floor(sDogCoins));
@@ -6282,6 +6527,7 @@ function stopGame() {
   setVal("res-gem-personal", Math.floor(sPersonalRewardGems));
   setVal("res-gem-piggy", Math.floor(sPiggyGems));
   setVal("res-gem-tele", Math.floor(sTeleGems));
+  setVal("res-gem-shock", Math.floor(sShockGems));
   setVal("res-gem-dog", Math.floor(sDogGems));
   setVal("res-gem-total", Math.floor(totalMatchGems));
 
@@ -6295,6 +6541,8 @@ function stopGame() {
   if (data.lvls.friend > 0) showEl("row-res-friend-xp");
   if (data.lvls.footy > 0) showEl("row-res-footy-xp");
   if (sTeleXP > 0) showEl("row-res-tele-xp");
+  if (sShockXP > 0) showEl("row-res-shock-xp");
+  if (sTechniqueXP > 0) showEl("row-res-technique-xp");
 
   if (data.lvls.viewer > 0 || data.lvls.vStand > 0 || data.lvls.fan > 0) {
     showEl("summary-coin-col", "block");
@@ -6345,6 +6593,10 @@ function stopGame() {
     showEl("summary-coin-col", "block");
     showEl("row-res-tele-coin");
   }
+  if (sShockCoins > 0) {
+    showEl("summary-coin-col", "block");
+    showEl("row-res-shock-coin");
+  }
 
   if (data.lvls.drink > 0) showEl("row-res-drink");
   if (data.lvls.attr > 0) showEl("row-res-attr");
@@ -6359,6 +6611,7 @@ function stopGame() {
     if (sCrystalTimeGems > 0) showEl("row-res-gem-time");
     if (sPersonalRewardGems > 0) showEl("row-res-gem-personal");
     if (sTeleGems > 0) showEl("row-res-tele-gem");
+    if (sShockGems > 0) showEl("row-res-shock-gem");
     if (sDogGems > 0) showEl("row-res-gem-dog");
 
     showEl("row-res-total-gem");
@@ -6376,7 +6629,7 @@ function stopGame() {
 
     setTimeout(() => {
       closeSummaryButton.disabled = false;
-    }, 1000);
+    }, 600);
   }
 
   registerMatchResults();
@@ -6411,8 +6664,12 @@ function closeSummary() {
     "row-res-piggy-coin",
     "row-res-gem-piggy",
     "row-res-tele-xp",
+    "row-res-technique-xp",
     "row-res-tele-coin",
     "row-res-tele-gem",
+    "row-res-shock-xp",
+    "row-res-shock-coin",
+    "row-res-shock-gem",
     "row-res-dog-coin",
     "row-res-gem-dog",
     "row-res-record",
@@ -6480,8 +6737,7 @@ function updateLiveStats() {
     typeof prestigeData !== "undefined" && prestigeData.skills
       ? prestigeData.skills
       : {};
-  const coachBonusPerPlayer = (data.lvls.coach || 0) * 2;
-  const footyTotal = (data.lvls.footy || 0) * (4 + coachBonusPerPlayer);
+  const footyTotal = getFootballerPowerPerSecond();
 
   const dogPowerBonuses = [0, 3, 7, 12];
   const friendBase = data.lvls.friend || 0;

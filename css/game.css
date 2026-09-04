@@ -1914,6 +1914,11 @@ body {
   left: calc(20px + var(--offset-x));
   top: 180px;
 }
+#node-techniqueShot {
+  left: calc(20px + var(--offset-x));
+  top: 60px;
+}
+
 #node-friendPower {
   left: calc(140px + var(--offset-x));
   top: 420px;
@@ -1947,7 +1952,7 @@ body {
   top: 60px;
 }
 
-#node-coach {
+#node-footballSchool {
   left: calc(740px + var(--offset-x));
   top: 60px;
 }
@@ -2042,6 +2047,10 @@ body {
 }
 #node-shockwave {
   left: calc(740px + var(--offset-x));
+  top: 540px;
+}
+#node-defectiveBalls {
+  left: calc(860px + var(--offset-x));
   top: 540px;
 }
 #node-specialReaction {
@@ -3679,4 +3688,48 @@ body {
   font-size: 1rem;
 
   box-shadow: 0 5px 0 #27ae60;
+}
+.technique-shot-wrap {
+  position: absolute;
+  width: 140px;
+  height: 90px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 50;
+}
+
+.technique-shot-runner {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 90px;
+  height: 90px;
+  background-image: url("../match/technique_fan.png");
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.technique-shot-ball {
+  position: absolute;
+  left: 68px;
+  bottom: 22px;
+  width: 33px;
+  height: 33px;
+  background-image: url("../match/ball.png");
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  animation: technique-shot-ball-fly 0.95s linear forwards;
+}
+
+@keyframes technique-shot-ball-fly {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(240px, -220px) scale(0.15);
+    opacity: 0;
+  }
 }
